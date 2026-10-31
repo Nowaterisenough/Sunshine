@@ -60,6 +60,8 @@ jobs:
           host: ${{ matrix.qt-host }}
           target: desktop
           arch: ${{ matrix.qt-arch }}
+          # Qt >= 6.11 splits Windows metadata by compiler; aqt 3.3 uses the old path.
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
           cache: true
       - name: Configure Windows panel
         if: runner.os == 'Windows'
