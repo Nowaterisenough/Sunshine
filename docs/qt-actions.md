@@ -8,9 +8,9 @@
 
 - Windows Server 2022 runner：MSVC 2022 x64，Qt 6.12.0 的 `win64_msvc2022_64` kit。
 - macOS 15 ARM64 runner：AppleClang，Qt 6.12.0 的 `clang_64` kit，编译目标为 arm64。
-- 自动执行配置、编译、接口测试、Qt 运行库部署、压缩、解压验证和程序启动检查。
+- 自动执行配置、编译、接口测试、Qt 运行库部署、真实页面 HTTPS 测试、压缩、解压验证和程序启动检查。
 - 不依赖主机的第三方子模块、驱动 SDK、发布令牌或上游仓库合并设置。
-- `contents: read` 权限，构建产物保留 30 天；失败时上传 CMake/测试诊断。
+- `contents: read` 权限，构建产物保留 30 天；失败时上传 CMake/测试诊断、页面截图和进程日志。
 
 在对应 workflow run 的 **Artifacts** 下载：
 
@@ -19,7 +19,7 @@
 | `Sunshine-Qt-Panel-windows-x64` | `Sunshine-Qt-Panel-6.12.0-windows-x64.zip` |
 | `Sunshine-Qt-Panel-macos-arm64` | `Sunshine-Qt-Panel-6.12.0-macos-arm64.zip` |
 
-每个 artifact 还包含 `SHA256SUMS.txt` 和 `build-info.json`，记录源码提交、Qt 版本和构建地址。macOS 使用 `ditto` 保留 `.app` 的符号链接与权限。包内附有许可证和启动说明。
+每个 artifact 还包含 `SHA256SUMS.txt` 和 `build-info.json`，记录源码提交、Qt 版本和构建地址。macOS 使用 `ditto` 保留 `.app` 的符号链接与权限。包内附有许可证和启动说明。macOS 使用系统 Secure Transport 后端，无需用户另装 OpenSSL；测试覆盖自签名本机服务连接及过期证书拒绝。
 
 **这些 ZIP 是控制面板及其运行库，需要已有的本机 Sunshine 内核。** Windows 启动 `assets/gui/sunshine-gui.exe`，macOS 打开 `sunshine-gui.app`。它们是开发构建，未经过正式发布签名/公证。
 

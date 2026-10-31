@@ -1,6 +1,7 @@
 #include "sunshine_client.h"
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -11,6 +12,7 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QSettings>
+#include <QSslConfiguration>
 #include <QSslError>
 
 namespace {
@@ -86,9 +88,22 @@ void SunshineClient::request(const QByteArray &method, const QString &path, cons
     auto *reply = m_network->sendCustomRequest(req, method, payload);
     const int generation = m_generation;
     connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors) {
+        const auto peerChain = reply->sslConfiguration().peerCertificateChain();
+        if (peerChain.isEmpty()) return;
+        const auto now = QDateTime::currentDateTimeUtc();
+        if (peerChain.first().effectiveDate() > now || peerChain.first().expiryDate() < now) {
+            qWarning("Local Sunshine certificate is outside its validity period.");
+            return;
+        }
         for (const auto &error : errors) {
+            // Secure Transport reports a local self-signed leaf as an untrusted root.
+            if (error.error() == QSslError::CertificateUntrusted && peerChain.size() == 1 &&
+                peerChain.first().isSelfSigned() && error.certificate() == peerChain.first()) continue;
             if (error.error() != QSslError::SelfSignedCertificate &&
-                error.error() != QSslError::HostNameMismatch) return;
+                error.error() != QSslError::HostNameMismatch) {
+                qWarning("Local Sunshine TLS error (%d): %s", error.error(), qPrintable(error.errorString()));
+                return;
+            }
         }
         reply->ignoreSslErrors(errors);
     });

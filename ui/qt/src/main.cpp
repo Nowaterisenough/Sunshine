@@ -15,6 +15,7 @@
 #include <QQuickWindow>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QSslSocket>
 #include <QSystemTrayIcon>
 #include <QTemporaryDir>
 
@@ -75,6 +76,13 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+#ifdef Q_OS_MACOS
+    // Official Qt kits also ship an OpenSSL plugin without its external libraries.
+    if (!QSslSocket::setActiveBackend("securetransport")) {
+        qCritical("The deployed macOS Secure Transport TLS plugin is unavailable.");
+        return 5;
+    }
+#endif
     SunshineClient client;
     if (parser.isSet("port")) client.setPort(parser.value("port").toInt());
     QQmlApplicationEngine engine;
