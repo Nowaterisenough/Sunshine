@@ -1,0 +1,160 @@
+# Sunshine Qt control panel
+
+Native C++ / Qt Quick control panel targeting **Qt 6.12.x**. The visual
+reference is **Magpie, the AI desktop app**, based on the user's screenshots of
+its Agent, Plugins and About/settings pages. It uses a dark neutral surface,
+horizontal navigation, continuous settings rows, segmented controls, subtle
+accent buttons and a three-column application grid. This is unrelated to the
+WinUI window upscaler with the same name. See [design tokens](DESIGN.md).
+
+The interface is Chinese; labels use `qsTr()` for future translations.
+
+This is an independent local management process. Capture, encoding, audio,
+GameStream pairing, transport, and the existing ABR algorithms remain in the
+original Sunshine host. The panel uses its existing HTTPS API on
+`127.0.0.1:47990`, with an editable management port. It does not embed a browser,
+WebView2, Tauri, an AI assistant, analytics, advertisements, or remote content.
+
+## Build the panel
+
+Install a matching Qt 6.12 C++ kit with Core, Gui, Network, Widgets, Quick,
+QuickControls2 and Test. On Windows, the Qt kit must match the compiler ABI;
+do not mix MSVC and MinGW. The existing release job uses the MSYS2 UCRT64 Qt
+packages. CMake rejects Qt versions outside the requested 6.12 series.
+
+From the repository root:
+
+```sh
+cmake --preset qt-ui
+cmake --build --preset qt-ui --parallel
+ctest --preset qt-ui
+cmake --install build/qt --prefix build/qt-install
+```
+
+If Qt is not discoverable, provide the installed kit using `CMAKE_PREFIX_PATH`
+or use that kit's `qt-cmake`. No developer-specific Qt path is stored here.
+
+The panel can also be built without the host's submodules and dependencies:
+
+```sh
+cmake -S ui/qt -B build/panel -DCMAKE_BUILD_TYPE=Release
+cmake --build build/panel --config Release --parallel
+ctest --test-dir build/panel -C Release --output-on-failure
+cmake --install build/panel --config Release --prefix build/panel-install
+```
+
+The executable is `sunshine-gui` (`sunshine-gui.exe` on Windows; a `.app` bundle
+on macOS). Installation deploys the required Qt runtime and QML imports.
+On Windows it installs under `assets/gui`, matching the host/service launcher.
+The panel supports `--hidden`, `--url=<local-management-url>`, and the
+installer's `--remove-autostart` argument. Multiple launches activate the same
+per-user instance. Closing to the system tray leaves streaming running; the
+tray's exit action exits only the panel. When no tray exists, closing exits.
+
+## Build the default distribution
+
+```sh
+cmake --preset release
+cmake --build --preset release --parallel
+cpack --preset release
+```
+
+The default ZIP is written to `build/release/cpack_artifacts/Sunshine.zip`.
+The Windows release workflow uses the same preset. With Inno Setup and the
+host's sidecar package available, build the installer with
+`cmake --build build/release --target innosetup`; that target builds both the
+host and Qt panel before staging. `qt-host` remains an equivalent preset with
+its own `build/qt-host` directory.
+
+Release and development presets explicitly enable Qt, including when
+reconfiguring an older build directory. While Qt is enabled, a cached or
+command-line `BUILD_WEB_UI=ON` is normalized to `OFF`; Qt distributions cannot
+accidentally include the legacy website. Qt discovery failure is fatal and
+never falls back to downloading Tauri. Installer filters also exclude stale
+legacy WebView2/stylus files and web assets from a reused staging directory.
+
+The full host retains its original dependency/toolchain requirements. In this
+fork, the VDD host sources currently include Windows headers unconditionally;
+the independently built panel works on macOS, but a macOS host build is blocked
+by that pre-existing platform dependency. Do not change capture/display code
+merely to build the panel. The original crypto source also requires OpenSSL 3
+rather than OpenSSL 4 with the tested toolchain.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `BUILD_QT_UI` | `ON` | Build/install the native panel; skip the old Tauri GUI download |
+| `SUNSHINE_QT_ONLY` | `OFF` | Build only the panel, without configuring host dependencies |
+| `SUNSHINE_QT_TESTS` | `ON` | Build Qt network contract tests |
+| `SUNSHINE_ENABLE_AI` | `OFF` | Exclude LLM proxy, credential storage, provider and stream workers from the host |
+| `BUILD_WEB_UI` | Forced `OFF` with Qt | Exclude the legacy Vue website even when an old cache enabled it |
+
+With AI disabled, `src/ai/disabled.cpp` supplies the existing boundary symbols:
+AI capability is false, the web AI routes are not registered, the legacy
+GameStream AI endpoint returns 404, and ABR takes its existing non-LLM path.
+It performs no credential reads, worker creation, or upstream network requests.
+Core call sites remain unchanged. AI-only transport/provider regression tests
+may still build their original implementation when `BUILD_TESTS=ON`; these test
+executables are not linked into or shipped with the production host.
+
+An already-installed legacy host is **not** modified when running just the Qt
+panel. Disabling AI inside that host requires rebuilding it with the option
+above. Legacy source remains available with
+`-DBUILD_QT_UI=OFF -DBUILD_WEB_UI=ON -DSUNSHINE_ENABLE_AI=ON`.
+
+## Implemented workflows
+
+- Host status, active encoder and a dedicated live session page.
+- Add, edit and remove applications; desktop streaming uses an empty command.
+  Existing advanced application fields are preserved.
+- PIN pairing, rename, enable/disable and unpair clients, with confirmation for
+  operations that interrupt a session.
+- General, audio/video, input and network settings; save/discard drafts and
+  restart through the acknowledged tray API.
+- Plain-text log filtering and export; bounded log reads, with no AI diagnosis.
+- First-run account creation, local port selection and portable host launch.
+- Dark appearance by default, optional light theme, vector icons, native tray and single instance.
+- Application search/type filters and settings search across all categories.
+
+Saving configuration first reads the latest complete API snapshot and overlays
+only edited fields. Changes to the same field in another editor are rejected.
+Readonly response metadata is excluded. App mutations verify that the indexed
+list has not changed and invalidate the editor when it has. The server has no
+atomic revision/ETag facility, so an external write *between* the final read
+and write cannot be eliminated without changing its API.
+
+The panel only connects to loopback, bypasses HTTP proxies, does not follow
+redirects, and only permits the self-signed/hostname mismatch errors needed by
+Sunshine's local certificate. Other TLS errors remain fatal. First-run
+`/welcome` redirects open the native setup form. Passwords are not persisted
+by the panel.
+
+## Verification
+
+`panel_client_tests` exercises configuration preservation/conflicts, legacy
+string and boolean status handling, setup redirects, malformed responses,
+app index races, PIN validation, stale replies after port changes, log export,
+and the acknowledged restart endpoint.
+
+The HTTPS smoke test runs the **actual application** against a temporary local
+TLS fixture. It checks all eight pages, every settings tab, both themes,
+compact layouts and first-run setup, then fails on QML runtime errors. Fixtures
+are explicitly labelled as test data; they do not represent a real stream.
+
+```sh
+python3 ui/qt/tests/smoke.py \
+  --binary build/qt/ui/qt/sunshine-gui.app/Contents/MacOS/sunshine-gui \
+  --output build/qt-screenshots
+```
+
+Use the platform's actual executable path on Windows/Linux. Smoke mode uses
+temporary settings and IPC, and never contacts or changes an installed host.
+Hardware encoding, Moonlight end-to-end streaming, Windows service launch and
+installer behavior still require validation on a Windows machine with the
+host's drivers. The `Build Qt Packages` workflow produces downloadable Windows
+x64 and macOS arm64 ZIPs with their Qt runtime and checksums. The main Windows
+workflow builds the full host. See [Actions packaging](../../docs/qt-actions.md).
+
+Visual reference: the user-provided Magpie AI screenshots (Agent list,
+Plugins grid and About/settings). No Magpie source, logos or fonts are bundled.
+The header keeps Sunshine's own identity and the navigation operates on real
+Sunshine features; no AI functions or placeholder plugin actions are added.
