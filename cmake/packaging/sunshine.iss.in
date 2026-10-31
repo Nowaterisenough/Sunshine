@@ -236,16 +236,15 @@ Source: "{#MySourceDir}\scripts\IMAGE_MIGRATION.md"; DestDir: "{app}\scripts"; F
 Source: "{#MySourceDir}\scripts\update-path.bat"; DestDir: "{app}\scripts"; Flags: ignoreversion; Components: application
 
 ; Assets (shaders, web UI, etc.)
-Source: "{#MySourceDir}\assets\*"; DestDir: "{app}\assets"; Excludes: "gui\*"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: assets
+Source: "{#MySourceDir}\assets\*"; DestDir: "{app}\assets"; Excludes: "@SUNSHINE_INSTALLER_ASSET_EXCLUDES@"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: assets
 ; Chinese installs get the Chinese default menu command names. Sunshine copies
 ; assets\apps.json to the config folder on first start, and Moonlight clients
 ; show these names as-is.
 Source: "{#MySourceDir}\assets\apps.zh.json"; DestDir: "{app}\assets"; DestName: "apps.json"; Languages: chinesesimplified; Flags: ignoreversion; Components: assets
 
 ; Required GUI and user-session tray agent
-Source: "{#MySourceDir}\assets\gui\{#MyAppGUIExeName}"; DestDir: "{app}\assets\gui"; Flags: ignoreversion; Components: gui
-Source: "{#MySourceDir}\assets\gui\alkaidlab-plugin-stylus.dll"; DestDir: "{app}\assets\gui"; Flags: ignoreversion; Components: gui
-Source: "{#MySourceDir}\assets\gui\WebView2Loader.dll"; DestDir: "{app}\assets\gui"; Flags: ignoreversion skipifsourcedoesntexist; Components: gui
+; Include the Qt runtime, platform plugins, and QML imports alongside the executable.
+Source: "{#MySourceDir}\assets\gui\*"; DestDir: "{app}\assets\gui"; Excludes: "@SUNSHINE_INSTALLER_GUI_EXCLUDES@"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: gui
 
 ; Helper tools
 Source: "{#MySourceDir}\tools\device-toggler.exe"; DestDir: "{app}\tools"; Flags: ignoreversion; Components: assets

@@ -1,5 +1,7 @@
 # Foundation Sunshine
 
+> **Qt 6.12 原生界面版本：** 以 AI 应用 Magpie 的深色顶部导航风格重写本地控制面板，保留串流内核，默认不构建 AI 代理、旧 Tauri 界面与网页前端。默认发行包使用 `cmake --preset release`、`cmake --build --preset release` 和 `cpack --preset release`。仅构建界面使用 `qt-ui`。参见 [Qt 界面构建与验证说明](ui/qt/README.md)。
+
 <div align="center">
 
 <picture>
@@ -28,7 +30,7 @@ Foundation Sunshine 是基于 [Sunshine](https://github.com/LizardByte/Sunshine)
 - **画面与显示：** 场景自适应 HDR、HDR10+ / HDR Vivid 与 Dolby Vision 扩展，按屏幕亮度校准；[ZakoDisplay](https://github.com/qiin2333/zako-vdd) 无需物理显示器即可提供 HDR 虚拟屏与多种屏幕组合。
 - **捕获与编码：** 支持 NVIDIA NVENC、AMD AMF、Intel Quick Sync 等编码器，并针对捕获和编码链路优化延迟与流畅度；Zako Direct 直接取得虚拟屏画面，减少捕获环节的拷贝。
 - **音频与麦克风透传：** 最高 7.1.4 环绕声、PCM / AC3 / E-AC3，支持麦克风回传、静音保活与音频丢包恢复。
-- **独立桌面控制面板：** 集中管理游戏库、显示器、设备组件、运行状态和更新，提供日志诊断与可选 AI 辅助。
+- **Qt 原生控制面板：** 使用 Qt 6.12 管理应用、客户端配对、串流设置和运行日志，支持浅色/深色主题与系统托盘，不包含 AI 助手。
 - **输入与原生手柄：** 精确式触控板、手写笔和客户端光标；在设备中心安装 DualSense 组件后，把支持的游戏通过 USB 接入 PC 时的自适应扳机、触觉等反馈带到远程连接中。
 - **桌面协作与连接管理：** 双向剪贴板、文件夹共享、USB 转发、连接中调画质、自适应码率，以及远端命令和会话控制。
 

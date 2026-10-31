@@ -30,6 +30,13 @@ set(INNO_STAGING_DIR "${CMAKE_BINARY_DIR}/inno_staging")
 # Use a separate variable so we don't overwrite CMAKE_INSTALL_PREFIX
 set(CMAKE_INSTALL_PREFIX_SAVED "${CMAKE_INSTALL_PREFIX}")
 set(CMAKE_INSTALL_PREFIX "${INNO_STAGING_DIR}")
+set(SUNSHINE_INSTALLER_ASSET_EXCLUDES "gui\\*")
+set(SUNSHINE_INSTALLER_GUI_EXCLUDES "")
+if(BUILD_QT_UI)
+    # Also protect direct ISCC invocations against stale legacy staging files.
+    string(APPEND SUNSHINE_INSTALLER_ASSET_EXCLUDES ",web\\*")
+    set(SUNSHINE_INSTALLER_GUI_EXCLUDES "WebView2Loader.dll,alkaidlab-plugin-stylus.dll")
+endif()
 
 configure_file(
     "${CMAKE_MODULE_PATH}/packaging/sunshine.iss.in"
@@ -69,6 +76,9 @@ add_custom_target(innosetup
 
 # Make sure sunshine is built before creating the installer
 add_dependencies(innosetup sunshine)
+if(TARGET sunshine-gui)
+    add_dependencies(innosetup sunshine-gui)
+endif()
 if(TARGET web-ui)
     add_dependencies(innosetup web-ui)
 endif()
@@ -82,6 +92,9 @@ add_custom_target(innosetup-staging
     VERBATIM
 )
 add_dependencies(innosetup-staging sunshine)
+if(TARGET sunshine-gui)
+    add_dependencies(innosetup-staging sunshine-gui)
+endif()
 if(TARGET web-ui)
     add_dependencies(innosetup-staging web-ui)
 endif()

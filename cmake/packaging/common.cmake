@@ -7,6 +7,9 @@ string(REGEX REPLACE "^v" "" CPACK_PACKAGE_VERSION ${PROJECT_VERSION})  # remove
 set(CPACK_PACKAGE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cpack_artifacts)
 set(CPACK_PACKAGE_CONTACT "https://alkaidlab.com")
 set(CPACK_PACKAGE_DESCRIPTION ${CMAKE_PROJECT_DESCRIPTION})
+if(BUILD_QT_UI)
+    set(CPACK_PACKAGE_DESCRIPTION "${PROJECT_LONG_DESCRIPTION}")
+endif()
 set(CPACK_PACKAGE_HOMEPAGE_URL ${CMAKE_PROJECT_HOMEPAGE_URL})
 set(CPACK_RESOURCE_FILE_LICENSE ${PROJECT_SOURCE_DIR}/LICENSE)
 set(CPACK_PACKAGE_ICON ${PROJECT_SOURCE_DIR}/assets/brand/sunshine.png)
@@ -19,20 +22,24 @@ install(DIRECTORY "${SUNSHINE_SOURCE_ASSETS_DIR}/common/assets/"
         PATTERN "web" EXCLUDE)
 
 # install ABR prompt template
+if(SUNSHINE_ENABLE_AI)
 install(FILES "${PROJECT_SOURCE_DIR}/src/assets/abr_prompt.md"
         DESTINATION "${SUNSHINE_ASSETS_DIR}")
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/assets")
 configure_file("${PROJECT_SOURCE_DIR}/src/assets/abr_prompt.md"
                "${CMAKE_CURRENT_BINARY_DIR}/assets/abr_prompt.md"
                COPYONLY)
+endif()
 include(${CMAKE_MODULE_PATH}/packaging/assets.cmake)
 
 # install built vite assets
+if(BUILD_WEB_UI AND NOT BUILD_QT_UI)
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/assets/web"
         DESTINATION "${SUNSHINE_ASSETS_DIR}")
+endif()
 
 # install sunshine control panel (Tauri GUI) — from pre-built download
-if(WIN32)
+if(WIN32 AND NOT BUILD_QT_UI)
     option(SUNSHINE_PREFER_LOCAL_GUI "Prefer a locally-built Tauri GUI over the downloaded GUI binary" ON)
 
     set(_local_gui_dir "")

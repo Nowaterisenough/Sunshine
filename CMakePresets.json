@@ -7,6 +7,25 @@
   },
   "configurePresets": [
     {
+      "name": "release",
+      "displayName": "Release (Qt 6.12)",
+      "description": "Default distribution: Sunshine host and Qt panel, without legacy UI or AI.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "BUILD_QT_UI": "ON",
+        "BUILD_WEB_UI": "OFF",
+        "SUNSHINE_QT_ONLY": "OFF",
+        "SUNSHINE_QT_TESTS": "OFF",
+        "SUNSHINE_ENABLE_AI": "OFF",
+        "BUILD_DOCS": "OFF",
+        "BUILD_TESTS": "OFF",
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TRAY_TESTS": "OFF",
+        "SUNSHINE_ENABLE_LEGACY_TRAY": "OFF"
+      }
+    },
+    {
       "name": "dev-win",
       "displayName": "Windows Dev (Ninja + MSYS2)",
       "description": "Local Windows development build. Run inside MSYS2 UCRT64 shell.",
@@ -15,7 +34,12 @@
       "cacheVariables": {
         "BUILD_DOCS": "OFF",
         "SUNSHINE_ASSETS_DIR": "assets",
-        "FETCH_DRIVER_DEPS": "OFF"
+        "FETCH_DRIVER_DEPS": "OFF",
+        "BUILD_QT_UI": "ON",
+        "BUILD_WEB_UI": "OFF",
+        "SUNSHINE_QT_ONLY": "OFF",
+        "SUNSHINE_ENABLE_AI": "OFF",
+        "SUNSHINE_ENABLE_LEGACY_TRAY": "OFF"
       }
     },
     {
@@ -27,9 +51,32 @@
         "BUILD_WEB_UI": "OFF",
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "qt-ui",
+      "displayName": "Qt 6.12 native panel",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/qt",
+      "cacheVariables": {
+        "SUNSHINE_QT_ONLY": "ON",
+        "SUNSHINE_QT_TESTS": "ON",
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_QT_UI": "ON"
+      }
+    },
+    {
+      "name": "qt-host",
+      "displayName": "Sunshine host with Qt 6.12 panel (no AI)",
+      "binaryDir": "${sourceDir}/build/qt-host",
+      "inherits": "release"
     }
   ],
   "buildPresets": [
+    {
+      "name": "release",
+      "displayName": "Build Qt distribution",
+      "configurePreset": "release"
+    },
     {
       "name": "dev",
       "displayName": "Dev Build",
@@ -38,6 +85,14 @@
     {
       "name": "test-win",
       "configurePreset": "test-win"
+    },
+    {
+      "name": "qt-ui",
+      "configurePreset": "qt-ui"
+    },
+    {
+      "name": "qt-host",
+      "configurePreset": "qt-host"
     }
   ],
   "testPresets": [
@@ -47,6 +102,37 @@
       "output": {
         "outputOnFailure": true
       }
+    },
+    {
+      "name": "qt-ui",
+      "configurePreset": "qt-ui",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "release",
+      "displayName": "Package Qt distribution (ZIP)",
+      "configurePreset": "release",
+      "generators": [
+        "ZIP"
+      ],
+      "configurations": [
+        "Release"
+      ]
+    },
+    {
+      "name": "qt-host",
+      "displayName": "Package Qt host (ZIP)",
+      "configurePreset": "qt-host",
+      "generators": [
+        "ZIP"
+      ],
+      "configurations": [
+        "Release"
+      ]
     }
   ]
 }

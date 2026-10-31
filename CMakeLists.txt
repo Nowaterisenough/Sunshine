@@ -14,6 +14,13 @@ project(Sunshine VERSION 0.0.0
         DESCRIPTION "Self-hosted game stream host for Moonlight"
         HOMEPAGE_URL "https://alkaidlab.com/sunshine")
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/prep/ui_options.cmake")
+if(SUNSHINE_QT_ONLY)
+    enable_testing()
+    add_subdirectory(ui/qt)
+    return()
+endif()
+
 set(PROJECT_LICENSE "GPL-3.0-only")
 
 set(PROJECT_FQDN "sunshine.alkaidlab.com")
@@ -24,6 +31,10 @@ set(PROJECT_LONG_DESCRIPTION "Offering low latency, cloud gaming server capabili
 and Nvidia GPUs for hardware encoding. Software encoding is also available. You can connect to Sunshine from any \
 Moonlight client on a variety of devices. A web UI is provided to allow configuration, and client pairing, from \
 your favorite web browser. Pair from the local server or any mobile device.")
+if(BUILD_QT_UI)
+    set(PROJECT_LONG_DESCRIPTION "Self-hosted game streaming for Moonlight with a native Qt 6.12 control panel. \
+Manage applications, client pairing, streaming settings and logs from the desktop.")
+endif()
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to 'Release' as none was specified.")
@@ -72,6 +83,10 @@ include(${CMAKE_MODULE_PATH}/compile_definitions/common.cmake)
 # target definitions
 include(${CMAKE_MODULE_PATH}/targets/beast_http.cmake)
 include(${CMAKE_MODULE_PATH}/targets/core.cmake)
+if(BUILD_QT_UI)
+    # Discover the shared Qt kit before the host's Windows static-library policy.
+    add_subdirectory(ui/qt)
+endif()
 include(${CMAKE_MODULE_PATH}/targets/common.cmake)
 
 # packaging

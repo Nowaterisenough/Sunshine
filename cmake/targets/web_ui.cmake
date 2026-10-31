@@ -1,5 +1,4 @@
-option(BUILD_WEB_UI "Build the web UI via npm" ON)
-if(NOT BUILD_WEB_UI)
+if(BUILD_QT_UI OR NOT BUILD_WEB_UI)
     return()
 endif()
 find_program(NPM npm REQUIRED)

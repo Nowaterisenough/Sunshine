@@ -8,6 +8,7 @@ list(APPEND SUNSHINE_EXTERNAL_LIBRARIES
 
 # GUI build (optional — CI uses pre-built binary from GUI repo releases)
 # For local development: ninja -C build sunshine-control-panel
+if(NOT BUILD_QT_UI)
 find_program(NPM npm)
 find_program(CARGO cargo)
 find_program(POWERSHELL_EXECUTABLE NAMES pwsh powershell powershell.exe)
@@ -30,4 +31,5 @@ if(NPM AND CARGO AND POWERSHELL_EXECUTABLE)
           VERBATIM)
 else()
   message(STATUS "npm/cargo/PowerShell not found — sunshine-control-panel target disabled (GUI will be fetched from release)")
+endif()
 endif()
