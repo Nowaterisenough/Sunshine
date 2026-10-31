@@ -20,6 +20,8 @@ def verify_layout(staging: Path, target: str) -> Path:
                     gui / "qml/QtQuick/qmldir"]
         required += [gui / f"Qt6{name}.dll" for name in
                      ("Core", "Gui", "Network", "Widgets", "Qml", "Quick", "QuickControls2")]
+        if not (gui / "libstdc++-6.dll").is_file():
+            required += [gui / name for name in ("msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll")]
     else:
         bundle = staging / "sunshine-gui.app/Contents"
         executable = bundle / "MacOS/sunshine-gui"
