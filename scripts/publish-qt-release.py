@@ -180,7 +180,9 @@ macOS ARM64 完整串流主机版尚未完成；本包不能单独将 Mac 变成
                 raise ValueError("Published release differs; refusing to overwrite its assets")
         else:
             if not release:
-                gh("release", "create", tag, "--repo", repository, "--target", host["head_sha"],
+                # Do not ask GITHUB_TOKEN to create a ref to a historical commit.
+                target = ["--verify-tag"] if ref else ["--target", host["head_sha"]]
+                gh("release", "create", tag, "--repo", repository, *target,
                    "--title", f"Sunshine Qt 6.12 Preview ({host['created_at'][:10]}, {host['head_sha'][:7]})",
                    "--notes-file", notes, "--draft", "--prerelease")
             gh("release", "upload", tag, *assets, "--repo", repository, "--clobber")
