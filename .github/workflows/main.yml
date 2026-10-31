@@ -317,6 +317,17 @@ jobs:
           cmake --install build --config Release --component gui --prefix ./build/qt-runtime-check
           QT_ROOT_DIR="$(cygpath -m "$MINGW_PREFIX")" python scripts/package-qt-panel.py \
             --staging build/qt-runtime-check --platform windows-x64 --verify-only --verify-run
+          QT_ROOT_DIR="$(cygpath -m "$MINGW_PREFIX")" QT_QUICK_BACKEND=software python ui/qt/tests/smoke.py \
+            --binary build/qt-runtime-check/assets/gui/sunshine-gui.exe --output build/qt-runtime-screenshots
+
+      - name: Upload Qt runtime diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: Qt-host-runtime-diagnostics
+          path: build/qt-runtime-screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Run native tests
         shell: msys2 {0}
