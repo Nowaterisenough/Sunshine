@@ -140,10 +140,11 @@ else:
         self.write('src_assets/common/assets/web/index.html', 'page\n')
         script = self.write('src_assets/common/assets/web/main.js', 'initial\n')
         self.write('scripts/vite/vite.config.js', '// config\n')
-        self.cmake_project(f'set(NPM "{npm.as_posix()}")\nset(SUNSHINE_SOURCE_ASSETS_DIR "${{PROJECT_SOURCE_DIR}}/src_assets")\n'
+        self.cmake_project(self.include('cmake/prep/ui_options.cmake')
+                   + f'set(NPM "{npm.as_posix()}")\nset(SUNSHINE_SOURCE_ASSETS_DIR "${{PROJECT_SOURCE_DIR}}/src_assets")\n'
                    'set(NPM_SOURCE_ASSETS_DIR "${SUNSHINE_SOURCE_ASSETS_DIR}")\nset(NPM_ASSETS_DIR "${PROJECT_BINARY_DIR}")\n'
                    + self.include('cmake/targets/web_ui.cmake'))
-        self.configure()
+        self.configure(['-DBUILD_QT_UI=OFF', '-DBUILD_WEB_UI=ON'])
         def calls():
             before = len(log.read_text().splitlines()) if log.exists() else 0
             self.build_project()
@@ -158,6 +159,23 @@ else:
         self.assertEqual(calls(), ['run'])
         shutil.rmtree(self.project / 'node_modules')
         self.assertEqual(calls(), ['ci', 'run'])
+
+    def test_qt_distribution_disables_cached_web_ui_without_invoking_npm(self):
+        self.cmake_project(self.include('cmake/prep/ui_options.cmake')
+                   + self.include('cmake/targets/web_ui.cmake')
+                   + 'if(NOT BUILD_QT_UI OR BUILD_WEB_UI OR TARGET web-ui)\n'
+                     'message(FATAL_ERROR "Legacy website leaked into the Qt distribution")\nendif()\n')
+        self.configure(['-DBUILD_WEB_UI=ON', '-DNPM=does-not-exist'])
+        self.build_project()
+        self.assertIn('BUILD_WEB_UI:BOOL=OFF', (self.build / 'CMakeCache.txt').read_text())
+        self.assertFalse((self.project / 'node_modules').exists())
+        self.configure()
+        self.build_project()
+
+    def test_qt_only_rejects_a_disabled_qt_target(self):
+        self.cmake_project(self.include('cmake/prep/ui_options.cmake'))
+        output = self.configure(['-DSUNSHINE_QT_ONLY=ON', '-DBUILD_QT_UI=OFF'], success=False)
+        self.assertIn('SUNSHINE_QT_ONLY requires BUILD_QT_UI=ON', output)
 
     def test_asset_copies_preserve_paths_edits_additions_and_removals(self):
         first = self.write('src_assets/common/assets/first/icon.txt', 'first\n')
