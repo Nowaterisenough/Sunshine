@@ -1,0 +1,110 @@
+name: Build Qt Packages
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ui/qt/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'cmake/prep/ui_options.cmake'
+      - 'scripts/package-qt-panel.py'
+      - '.github/workflows/qt-panel.yml'
+      - 'LICENSE'
+  push:
+    paths:
+      - 'ui/qt/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'cmake/prep/ui_options.cmake'
+      - 'scripts/package-qt-panel.py'
+      - '.github/workflows/qt-panel.yml'
+      - 'LICENSE'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qt-packages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  QT_VERSION: '6.12.0'
+
+jobs:
+  panel:
+    name: Qt panel / ${{ matrix.platform }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            platform: windows-x64
+            qt-host: windows
+            qt-arch: win64_msvc2022_64
+          - os: macos-15
+            platform: macos-arm64
+            qt-host: mac
+            qt-arch: clang_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install Qt 6.12
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: ${{ matrix.qt-host }}
+          target: desktop
+          arch: ${{ matrix.qt-arch }}
+          cache: true
+      - name: Configure Windows panel
+        if: runner.os == 'Windows'
+        run: cmake -S ui/qt -B build/panel -G "Visual Studio 17 2022" -A x64 -DSUNSHINE_QT_TESTS=ON
+      - name: Configure macOS panel
+        if: runner.os == 'macOS'
+        run: cmake -S ui/qt -B build/panel -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DSUNSHINE_QT_TESTS=ON
+      - name: Build panel
+        run: cmake --build build/panel --config Release --parallel 4
+      - name: Test API contracts
+        run: ctest --test-dir build/panel -C Release --output-on-failure
+      - name: Deploy Qt runtime
+        run: cmake --install build/panel --config Release --prefix staging
+      - name: Package panel and verify archive
+        env:
+          PANEL_PLATFORM: ${{ matrix.platform }}
+        shell: bash
+        run: python scripts/package-qt-panel.py --staging staging --output artifacts --platform "$PANEL_PLATFORM" --qt-version "$QT_VERSION" --verify-run
+      - name: Upload Qt packages
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: Sunshine-Qt-Panel-${{ matrix.platform }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: Qt-panel-diagnostics-${{ matrix.platform }}
+          path: |
+            build/panel/CMakeCache.txt
+            build/panel/CMakeFiles/CMakeConfigureLog.yaml
+            build/panel/Testing/Temporary/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Describe downloadable package
+        shell: bash
+        env:
+          PANEL_PLATFORM: ${{ matrix.platform }}
+        run: |
+          {
+            echo "### Qt $QT_VERSION / $PANEL_PLATFORM"
+            echo 'The artifact contains a ZIP, SHA-256 checksums, and build metadata.'
+            echo 'This is the standalone Qt control panel with its runtime. It connects to an existing local Sunshine host.'
+            echo 'The Build and Release workflow produces the full Windows host installer and portable package.'
+          } >> "$GITHUB_STEP_SUMMARY"

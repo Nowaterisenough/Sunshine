@@ -16,10 +16,6 @@ on:
       - master
   workflow_dispatch:
     inputs:
-      gui_run_id:
-        description: 'Optional successful Panel artifact run; its commit must match the Panel submodule'
-        type: string
-        default: ''
       rtx_hdr:
         description: 'RTX HDR support for development branches (official master always requires ON)'
         type: choice
@@ -57,22 +53,26 @@ jobs:
 
       - name: Setup Release (Auto)
         id: setup_release_auto
-        if: github.event_name != 'workflow_dispatch'
+        if: github.event_name != 'workflow_dispatch' && github.repository == 'AlkaidLab/foundation-sunshine'
         uses: LizardByte/setup-release-action@v2025.426.225
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Release (Manual)
+      - name: Prepare artifact version (fork or manual build)
         id: setup_release_manual
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.repository != 'AlkaidLab/foundation-sunshine'
         run: |
-          SUFFIX=$([ "${{ github.ref_name }}" = "master" ] && echo "" || echo "-dev")
-          echo "publish_release=false" >> $GITHUB_OUTPUT
-          echo "release_body=Manual build (${{ github.ref_name }})" >> $GITHUB_OUTPUT
-          echo "release_commit=${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "release_generate_release_notes=false" >> $GITHUB_OUTPUT
-          echo "release_tag=manual-$(date +%Y%m%d-%H%M%S)${SUFFIX}" >> $GITHUB_OUTPUT
-          echo "release_version=manual-$(date +%Y%m%d-%H%M%S)${SUFFIX}" >> $GITHUB_OUTPUT
+          # Fork builds only upload artifacts. They do not require upstream
+          # merge settings, release tokens, or permission to publish a release.
+          VERSION="v$(date -u +%Y.%m%d).$GITHUB_RUN_NUMBER"
+          {
+            echo "publish_release=false"
+            echo "release_body=Qt build for $GITHUB_REF_NAME at $GITHUB_SHA"
+            echo "release_commit=$GITHUB_SHA"
+            echo "release_generate_release_notes=false"
+            echo "release_tag=$VERSION"
+            echo "release_version=$VERSION"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Filter bot contributors
         id: filter_release_contributors
@@ -191,6 +191,9 @@ jobs:
             "mingw-w64-ucrt-x86_64-cmake"
             "mingw-w64-ucrt-x86_64-lld"
             "mingw-w64-ucrt-x86_64-ninja"
+            "mingw-w64-ucrt-x86_64-qt6-base"
+            "mingw-w64-ucrt-x86_64-qt6-declarative"
+            "mingw-w64-ucrt-x86_64-qt6-svg"
             "mingw-w64-ucrt-x86_64-cppwinrt"
             "mingw-w64-ucrt-x86_64-curl-winssl"
             "mingw-w64-ucrt-x86_64-graphviz"
@@ -223,13 +226,6 @@ jobs:
           echo "  Ninja: $(ninja --version)"
           echo "  GCC: $(gcc --version | head -1)"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: .node-version
-          cache: npm
-          cache-dependency-path: package-lock.json
-
       - name: Setup .NET for DualSense sidecar
         uses: actions/setup-dotnet@v6
         with:
@@ -240,17 +236,6 @@ jobs:
         env:
           RELEASE_TAG: ${{ needs.setup_release.outputs.release_tag }}.杂鱼
         run: .\scripts\build-ds5-sidecar.ps1 -ReleaseTag $env:RELEASE_TAG
-
-      - name: Build Web UI
-        shell: pwsh
-        run: |
-          npm ci
-          npm run lint:webui
-          npm run test:webui
-          New-Item -ItemType Directory -Force -Path build | Out-Null
-          $env:SUNSHINE_SOURCE_ASSETS_DIR = "${{ github.workspace }}\src_assets"
-          $env:SUNSHINE_ASSETS_DIR = "${{ github.workspace }}\build"
-          npm run build
 
       - name: Cache compiler objects
         uses: actions/cache/restore@v6
@@ -266,18 +251,6 @@ jobs:
           key: ccache-windows-${{ github.run_id }}
           restore-keys: |
             ccache-windows-
-
-      - name: Fetch paired GUI artifact
-        if: github.event_name == 'workflow_dispatch' && inputs.gui_run_id != ''
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GUI_RUN_ID: ${{ inputs.gui_run_id }}
-        run: |
-          $arguments = @{ Destination = "$env:RUNNER_TEMP/paired-gui" }
-          if ($env:GUI_RUN_ID) { $arguments.RunId = $env:GUI_RUN_ID }
-          ./scripts/fetch-paired-gui.ps1 @arguments
-          "GUI_BUNDLE_DIR=$env:RUNNER_TEMP/paired-gui" >> $env:GITHUB_ENV
 
       - name: Configure Windows
         id: configure_windows
@@ -308,20 +281,13 @@ jobs:
         run: |
           mkdir -p build
           ccache --zero-stats
-          gui_options=()
-          if [[ -n "${GUI_BUNDLE_DIR:-}" ]]; then
-            gui_options=(-DFETCH_GUI=OFF "-DGUI_DIR=$GUI_BUNDLE_DIR")
-          fi
-          cmake \
+          cmake --preset release \
             -B build \
-            -G Ninja \
-            -S . \
-            "${gui_options[@]}" \
             -DBUILD_DOCS=OFF \
             -DSUNSHINE_RTX_HDR="$SUNSHINE_RTX_HDR" \
             -DBUILD_TESTS=ON \
             -DBUILD_TRAY_TESTS=ON \
-            -DBUILD_WEB_UI=OFF \
+            -DSUNSHINE_QT_TESTS=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DSUNSHINE_ASSETS_DIR=assets \
@@ -440,6 +406,13 @@ jobs:
           # Package the Inno Setup installer and portable ZIP.
           # Install into the staging directory first.
           cmake --install . --prefix ./inno_staging
+          test -f ./inno_staging/assets/gui/sunshine-gui.exe
+          test -f ./inno_staging/assets/gui/Qt6Core.dll
+          test -f ./inno_staging/assets/gui/Qt6Quick.dll
+          test -d ./inno_staging/assets/gui/qml
+          test ! -e ./inno_staging/assets/gui/WebView2Loader.dll
+          test ! -e ./inno_staging/assets/gui/alkaidlab-plugin-stylus.dll
+          test ! -d ./inno_staging/assets/web
           test -f ./inno_staging/tools/ds5-sidecar-package.json
           test ! -e ./inno_staging/tools/sunshine-ds5-sidecar/Sunshine.Ds5Sidecar.exe
           if [[ "$RTX_VIDEO_ADAPTER_BUILT" == "true" ]]; then
@@ -479,6 +452,13 @@ jobs:
           cpack -G ZIP --config ./CPackConfig.cmake --verbose
           cmake -E tar tf ./cpack_artifacts/Sunshine.zip | tr '\\' '/' > portable-files.txt
           grep -F "Sunshine/tools/ds5-sidecar-package.json" portable-files.txt
+          grep -F "Sunshine/assets/gui/sunshine-gui.exe" portable-files.txt
+          grep -F "Sunshine/assets/gui/Qt6Core.dll" portable-files.txt
+          grep -F "Sunshine/assets/gui/Qt6Quick.dll" portable-files.txt
+          if grep -Ei 'assets/web/|WebView2Loader\.dll|alkaidlab-plugin-stylus\.dll' portable-files.txt; then
+            echo "Legacy UI files must not be included in the default Qt distribution"
+            exit 1
+          fi
           if [[ "$RTX_VIDEO_ADAPTER_BUILT" == "true" ]]; then
             grep -F "Sunshine/tools/hdr_enhanced/nvidia_rtx_video/foundation_rtx_video_adapter.dll" portable-files.txt
           fi

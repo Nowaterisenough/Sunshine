@@ -368,8 +368,8 @@ jobs:
           SIGNED_SRC="signed-files/Sunshine"
           
           echo "Replacing with signed files..."
-          if [ ! -f "$SIGNED_SRC/assets/gui/alkaidlab-plugin-stylus.dll" ]; then
-            echo "Error: signed alkaidlab-plugin-stylus.dll is missing"
+          if [ ! -f "$SIGNED_SRC/assets/gui/sunshine-gui.exe" ]; then
+            echo "Error: signed Sunshine control panel is missing"
             exit 1
           fi
           cp -fv "$SIGNED_SRC/sunshine.exe"                 "$STAGING_DIR/sunshine.exe"
@@ -383,8 +383,7 @@ jobs:
           cp -fv "$SIGNED_SRC/tools/setreg.exe"             "$STAGING_DIR/tools/setreg.exe"
           cp -fv "$SIGNED_SRC/tools/audio-info.exe"         "$STAGING_DIR/tools/audio-info.exe"
           cp -fv "$SIGNED_SRC/tools/dxgi-info.exe"          "$STAGING_DIR/tools/dxgi-info.exe"
-          cp -fv "$SIGNED_SRC/assets/gui/sunshine-gui.exe"  "$STAGING_DIR/assets/gui/sunshine-gui.exe"
-          cp -fv "$SIGNED_SRC/assets/gui/alkaidlab-plugin-stylus.dll" "$STAGING_DIR/assets/gui/alkaidlab-plugin-stylus.dll"
+          cp -Rv "$SIGNED_SRC/assets/gui/." "$STAGING_DIR/assets/gui/"
           cp -fv "$SIGNED_SRC/tools/hdr_enhanced/nvidia_rtx_video/foundation_rtx_video_adapter.dll" \
             "$STAGING_DIR/tools/hdr_enhanced/nvidia_rtx_video/foundation_rtx_video_adapter.dll"
 
