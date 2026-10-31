@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 
@@ -16,6 +17,18 @@ class ReleaseValidationTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.folder = Path(self.temporary.name)
+
+    def test_draft_lookup_when_tag_endpoint_returns_404(self):
+        draft = {"id": 123, "tag_name": "qt-example", "draft": True}
+        with patch.object(release, "api", side_effect=[None, [draft]]) as api:
+            self.assertEqual(release.find_release("owner/repo", "qt-example"), draft)
+            self.assertIn("/releases?", api.call_args.args[0])
+
+    def test_published_release_lookup_needs_no_draft_listing(self):
+        published = {"id": 123, "tag_name": "qt-example", "draft": False}
+        with patch.object(release, "api", return_value=published) as api:
+            self.assertEqual(release.find_release("owner/repo", "qt-example"), published)
+            api.assert_called_once()
 
     def panel(self):
         name = "Sunshine-Qt-Panel-6.12.0-macos-arm64.zip"

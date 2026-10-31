@@ -31,6 +31,22 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def find_release(repository, tag):
+    published = api(f"repos/{repository}/releases/tags/{tag}", optional=True)
+    if published:
+        return published
+    # The tag endpoint omits drafts, even when the caller can edit them.
+    page = 1
+    while True:
+        releases = api(f"repos/{repository}/releases?per_page=100&page={page}")
+        for item in releases:
+            if item["tag_name"] == tag:
+                return item
+        if len(releases) < 100:
+            return None
+        page += 1
+
+
 def checked_file(folder, name, expected):
     if not isinstance(name, str) or Path(name).name != name or "\\" in name:
         raise ValueError("Invalid artifact filename")
@@ -173,10 +189,11 @@ macOS ARM64 完整串流主机版尚未完成；本包不能单独将 Mac 变成
         ref = api(f"repos/{repository}/git/ref/tags/{tag}", optional=True)
         if ref and (ref["object"]["type"] != "commit" or ref["object"]["sha"] != host["head_sha"]):
             raise ValueError("Release tag points at a different commit")
-        release = api(f"repos/{repository}/releases/tags/{tag}", optional=True)
+        release = find_release(repository, tag)
+        expected_assets = {path.name: f"sha256:{digest(path)}" for path in assets}
         if release and not release["draft"]:
             remote = {item["name"]: item.get("digest") for item in release["assets"]}
-            if remote != {path.name: f"sha256:{digest(path)}" for path in assets}:
+            if remote != expected_assets:
                 raise ValueError("Published release differs; refusing to overwrite its assets")
         else:
             if not release:
@@ -185,10 +202,15 @@ macOS ARM64 完整串流主机版尚未完成；本包不能单独将 Mac 变成
                 gh("release", "create", tag, "--repo", repository, *target,
                    "--title", f"Sunshine Qt 6.12 Preview ({host['created_at'][:10]}, {host['head_sha'][:7]})",
                    "--notes-file", notes, "--draft", "--prerelease")
-            gh("release", "upload", tag, *assets, "--repo", repository, "--clobber")
-            uploaded = api(f"repos/{repository}/releases/tags/{tag}")
+                release = find_release(repository, tag)
+            if not release:
+                raise RuntimeError("New release draft could not be located")
+            remote = {item["name"]: item.get("digest") for item in release["assets"]}
+            if remote != expected_assets:
+                gh("release", "upload", tag, *assets, "--repo", repository, "--clobber")
+            uploaded = api(f"repos/{repository}/releases/{release['id']}")
             remote = {item["name"]: item.get("digest") for item in uploaded["assets"]}
-            if remote != {path.name: f"sha256:{digest(path)}" for path in assets}:
+            if remote != expected_assets:
                 raise ValueError("Release upload verification failed; leaving the draft unpublished")
             gh("release", "edit", tag, "--repo", repository, "--draft=false", "--prerelease", "--latest=false")
         url = f"https://github.com/{repository}/releases/tag/{tag}"
