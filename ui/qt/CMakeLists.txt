@@ -44,6 +44,16 @@ install(TARGETS sunshine-gui
     BUNDLE DESTINATION . COMPONENT gui
     RUNTIME DESTINATION "${_panel_destination}" COMPONENT gui)
 if(WIN32)
+    set(_panel_mingw_deploy "")
+    if(MINGW)
+        set(_panel_mingw_deploy "
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM windows+pe)
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL objdump)
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_COMMAND \"${CMAKE_OBJDUMP}\")
+set(panel_mingw_bin \"$<TARGET_FILE_DIR:Qt6::Core>\")
+include(\"${CMAKE_CURRENT_SOURCE_DIR}/cmake/DeployMinGW.cmake\")
+")
+    endif()
     qt_generate_deploy_script(TARGET sunshine-gui OUTPUT_SCRIPT _panel_deploy CONTENT "
 set(QT_DEPLOY_BIN_DIR assets/gui)
 set(QT_DEPLOY_LIB_DIR assets/gui)
@@ -52,6 +62,7 @@ set(QT_DEPLOY_QML_DIR assets/gui/qml)
 qt_deploy_qml_imports(TARGET sunshine-gui PLUGINS_FOUND plugins_found)
 qt_deploy_runtime_dependencies(EXECUTABLE \"$<TARGET_FILE:sunshine-gui>\"
     ADDITIONAL_MODULES \${plugins_found} GENERATE_QT_CONF)
+${_panel_mingw_deploy}
 ")
 else()
     qt_generate_deploy_qml_app_script(TARGET sunshine-gui OUTPUT_SCRIPT _panel_deploy
