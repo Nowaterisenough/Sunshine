@@ -612,6 +612,9 @@ list(REMOVE_ITEM TEST_SOURCES
 
 set(ABR_TEST_STUB_SOURCE ${CMAKE_SOURCE_DIR}/tests/unit/abr_test_stubs.cpp)
 list(REMOVE_ITEM TEST_SOURCES ${ABR_TEST_STUB_SOURCE})
+if(NOT SUNSHINE_ENABLE_AI)
+    list(REMOVE_ITEM TEST_SOURCES ${CMAKE_SOURCE_DIR}/tests/unit/test_credential_store.cpp)
+endif()
 if (WIN32)
     # Windows-only suites include fake APIs or backend paths of their own.
     list(REMOVE_ITEM TEST_SOURCES
@@ -662,7 +665,7 @@ target_link_libraries(${PROJECT_NAME}
         ${SUNSHINE_EXTERNAL_LIBRARIES}
         gtest
         ${PLATFORM_LIBRARIES}
-        sunshine_project_options sunshine_coverage sunshine_crypto sunshine_ai_provider sunshine_ai_stream)
+        sunshine_project_options sunshine_coverage sunshine_crypto ${SUNSHINE_AI_LIBRARIES})
 target_compile_definitions(${PROJECT_NAME} PUBLIC
         SUNSHINE_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
         ${SUNSHINE_DEFINITIONS}

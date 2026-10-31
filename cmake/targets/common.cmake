@@ -49,7 +49,7 @@ endif()
 
 target_link_libraries(sunshine PRIVATE
         ${SUNSHINE_EXTERNAL_LIBRARIES} ${EXTRA_LIBS}
-        sunshine_project_options sunshine_crypto sunshine_ai_provider sunshine_ai_stream)
+        sunshine_project_options sunshine_crypto ${SUNSHINE_AI_LIBRARIES})
 if (TARGET sunshine_rtx_video_adapter)
     add_dependencies(sunshine sunshine_rtx_video_adapter)
     target_include_directories(sunshine PRIVATE "${RTX_VIDEO_TRUST_INCLUDE}")

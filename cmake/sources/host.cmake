@@ -189,4 +189,8 @@ set(SUNSHINE_HOST_SOURCES
     src/tray/tray_http.cpp src/tray/tray_http.h
     src/tray/tray_state.cpp src/tray/tray_state.h
 )
+if(NOT SUNSHINE_ENABLE_AI)
+    list(FILTER SUNSHINE_HOST_SOURCES EXCLUDE REGEX "^src/ai/|^src/nvhttp/ai_api\\.")
+    list(APPEND SUNSHINE_HOST_SOURCES src/ai/disabled.cpp)
+endif()
 list(TRANSFORM SUNSHINE_HOST_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")

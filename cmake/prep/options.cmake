@@ -9,6 +9,7 @@ set(SUNSHINE_PUBLISHER_ISSUE_URL "https://github.com/qiin2333/Sunshine/issues"
 
 option(BUILD_DOCS "Build documentation" OFF)
 option(BUILD_TESTS "Build tests" OFF)
+option(SUNSHINE_ENABLE_AI "Build the optional LLM proxy and AI credential storage" OFF)
 option(BUILD_TRAY_TESTS "Build the focused tray protocol tests" OFF)
 option(NPM_OFFLINE "Use offline npm packages. You must ensure packages are in your npm cache." OFF)
 
