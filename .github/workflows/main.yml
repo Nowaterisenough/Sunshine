@@ -316,11 +316,9 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
       - name: Save compiler cache
-        # Only master writes (always(): a failed or cancelled build still
-        # produced valid objects). PR runs restore master's entry, so they
-        # don't need to save, and skipping their saves keeps the shared
-        # cache quota flat.
-        if: always() && github.ref == 'refs/heads/master'
+        # Manual branch builds also retain completed objects after a test failure.
+        # PR runs only restore; GitHub keeps caches scoped to their source ref.
+        if: always() && (github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch')
         id: ccache_save
         continue-on-error: true
         uses: actions/cache/save@v6
@@ -329,7 +327,7 @@ jobs:
           key: ccache-windows-${{ github.run_id }}
 
       - name: Prune stale compiler cache entries
-        # Collapse the cache to exactly one entry (the newest one saved).
+        # Keep the newest entry for this ref; never prune another branch's cache.
         # Entries pile up one-per-run otherwise; on a 10 GB repo quota that
         # once got the entire lineage LRU-evicted. A single entry is also
         # restored by every later run, which keeps resetting its 7-day
@@ -342,7 +340,7 @@ jobs:
         # Skipped unless the save step actually succeeded (outcome keeps the
         # real result under continue-on-error; the save subaction sets no
         # outputs, so conclusion can't tell success from failure).
-        if: always() && github.ref == 'refs/heads/master' && steps.ccache_save.outcome == 'success'
+        if: always() && (github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch') && steps.ccache_save.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
@@ -352,7 +350,7 @@ jobs:
           # latter caps at --limit 100, and once this repo's other caches
           # (msys2, npm, ...) grow past that, stale ccache entries would
           # fall outside the window and never get pruned.
-          $stale = gh api --paginate "repos/$env:GITHUB_REPOSITORY/actions/caches?per_page=100" --jq '.actions_caches[] | select(.key | test("^ccache-windows-[0-9]+$")) | [(.key | sub("^ccache-windows-";"") | tonumber), .id, .key] | @tsv' |
+          $stale = gh api --paginate "repos/$env:GITHUB_REPOSITORY/actions/caches?per_page=100" --jq '.actions_caches[] | select(.ref == env.GITHUB_REF) | select(.key | test("^ccache-windows-[0-9]+$")) | [(.key | sub("^ccache-windows-";"") | tonumber), .id, .key] | @tsv' |
             Where-Object { $_ } |
             ForEach-Object {
               $parts = $_ -split "`t"
