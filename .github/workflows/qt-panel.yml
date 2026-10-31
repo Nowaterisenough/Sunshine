@@ -75,6 +75,17 @@ jobs:
         run: ctest --test-dir build/panel -C Release --output-on-failure
       - name: Deploy Qt runtime
         run: cmake --install build/panel --config Release --prefix staging
+      - name: Verify deployed pages over local HTTPS
+        shell: bash
+        env:
+          QT_QUICK_BACKEND: software
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            panel_binary=staging/assets/gui/sunshine-gui.exe
+          else
+            panel_binary=staging/sunshine-gui.app/Contents/MacOS/sunshine-gui
+          fi
+          python ui/qt/tests/smoke.py --binary "$panel_binary" --output build/panel/screenshots
       - name: Package panel and verify archive
         env:
           PANEL_PLATFORM: ${{ matrix.platform }}
@@ -97,6 +108,7 @@ jobs:
             build/panel/CMakeCache.txt
             build/panel/CMakeFiles/CMakeConfigureLog.yaml
             build/panel/Testing/Temporary/
+            build/panel/screenshots/
           if-no-files-found: ignore
           retention-days: 7
       - name: Describe downloadable package
