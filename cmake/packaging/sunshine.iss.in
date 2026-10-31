@@ -183,8 +183,10 @@ Name: "tools"; Description: "{cm:ComponentTools} — {cm:ComponentToolsDesc}"; T
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [InstallDelete]
-; Remove old hashed Web UI bundles before installing the freshly built frontend.
+; Remove stale Web UI assets before installing the selected frontend.
 Type: filesandordirs; Name: "{app}\assets\web"
+; Qt replaces the executable in place; remove only known obsolete GUI libraries.
+@SUNSHINE_INSTALLER_LEGACY_GUI_CLEANUP@
 ; The native GUI plugin replaces the legacy standalone diagnostic executable.
 Type: files; Name: "{app}\tools\stylus-input-probe.exe"
 ; Earlier RTX adapter builds placed the complete VC runtime beside Sunshine.

@@ -29,6 +29,10 @@
 
 该流程使用默认 `release` 预设，编译原有 Sunshine 内核及 Qt 控制面板，输出安装器、便携 ZIP 和所需设备组件清单。打包阶段验证 Qt 运行库存在，并拒绝混入旧网页、WebView2 或旧 Tauri 插件。
 
+Qt 安装器覆盖旧版时会删除安装目录内的旧 `assets/web`、`assets/gui/WebView2Loader.dll` 和 `assets/gui/alkaidlab-plugin-stylus.dll`，并用 Qt 程序覆盖同名的 `sunshine-gui.exe`。旧 GUI 文件的打包排除与升级删除共用同一份名单；显式关闭 Qt 的兼容构建不会删除它需要的 GUI DLL。
+
+清理不会清空整个 GUI 或安装目录，也不会删除配置、应用列表、配对数据、封面、WebView 用户配置或系统共享的 WebView2 运行环境。Windows CI 会使用生产模板生成的清理规则，在临时安装目录执行真实 Inno Setup 覆盖安装，检查 Qt/兼容两种模式及重复升级。测试不安装真实服务或驱动。**便携 ZIP 直接覆盖解压不会执行安装器清理规则。**
+
 fork 和手动构建使用运行编号生成版本信息，不需要上游 `setup-release-action` 的 Squash-only 合并设置或发布密钥。上游官方仓库仍保留原有发布流程。
 
 完整构建依然需要主机的 Windows 编译依赖和设备 SDK；独立 Qt 任务可单独验证和下载界面。未经实际 Actions 执行，不能把本地工作流检查当作完整 Windows 打包成功。
