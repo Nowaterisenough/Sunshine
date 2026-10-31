@@ -30,6 +30,19 @@ class ReleaseValidationTest(unittest.TestCase):
             self.assertEqual(release.find_release("owner/repo", "qt-example"), published)
             api.assert_called_once()
 
+    def test_creation_uses_response_id_without_waiting_for_listing(self):
+        draft = {"id": 123, "draft": True, "assets": []}
+        with patch.object(release, "api", return_value=draft) as api:
+            result = release.create_draft("owner/repo", "qt-example", "source-sha", "Preview", "Notes", False)
+            self.assertIs(result, draft)
+            api.assert_called_once()
+            self.assertEqual(api.call_args.kwargs["body"]["target_commitish"], "source-sha")
+
+    def test_existing_tag_does_not_request_historical_ref_creation(self):
+        with patch.object(release, "api", return_value={"id": 123}) as api:
+            release.create_draft("owner/repo", "qt-example", "old-sha", "Preview", "Notes", True)
+            self.assertNotIn("target_commitish", api.call_args.kwargs["body"])
+
     def panel(self):
         name = "Sunshine-Qt-Panel-6.12.0-macos-arm64.zip"
         archive = self.folder / name

@@ -17,13 +17,25 @@ def gh(*args):
     return subprocess.check_output(["gh", *map(str, args)], text=True).strip()
 
 
-def api(path, optional=False):
-    result = subprocess.run(["gh", "api", path], capture_output=True, text=True)
+def api(path, optional=False, body=None):
+    command = ["gh", "api", path]
+    if body is not None:
+        command += ["--method", "POST", "--input", "-"]
+    result = subprocess.run(command, input=json.dumps(body) if body is not None else None,
+                            capture_output=True, text=True)
     if result.returncode:
         if optional and "HTTP 404" in result.stderr:
             return None
         raise RuntimeError(result.stderr.strip())
     return json.loads(result.stdout)
+
+
+def create_draft(repository, tag, commit, title, notes, tag_exists):
+    body = {"tag_name": tag, "name": title, "body": notes, "draft": True, "prerelease": True}
+    if not tag_exists:
+        body["target_commitish"] = commit
+    # The create response is authoritative; release listings can lag behind it.
+    return api(f"repos/{repository}/releases", body=body)
 
 
 def digest(path):
@@ -197,12 +209,9 @@ macOS ARM64 完整串流主机版尚未完成；本包不能单独将 Mac 变成
                 raise ValueError("Published release differs; refusing to overwrite its assets")
         else:
             if not release:
-                # Do not ask GITHUB_TOKEN to create a ref to a historical commit.
-                target = ["--verify-tag"] if ref else ["--target", host["head_sha"]]
-                gh("release", "create", tag, "--repo", repository, *target,
-                   "--title", f"Sunshine Qt 6.12 Preview ({host['created_at'][:10]}, {host['head_sha'][:7]})",
-                   "--notes-file", notes, "--draft", "--prerelease")
-                release = find_release(repository, tag)
+                release = create_draft(repository, tag, host["head_sha"],
+                    f"Sunshine Qt 6.12 Preview ({host['created_at'][:10]}, {host['head_sha'][:7]})",
+                    notes.read_text(encoding="utf-8"), bool(ref))
             if not release:
                 raise RuntimeError("New release draft could not be located")
             remote = {item["name"]: item.get("digest") for item in release["assets"]}
