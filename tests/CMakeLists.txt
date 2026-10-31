@@ -670,6 +670,8 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
         SUNSHINE_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
         ${SUNSHINE_DEFINITIONS}
         ${TEST_DEFINITIONS})
+set_source_files_properties(${CMAKE_SOURCE_DIR}/tests/unit/test_confighttp_routes.cpp
+        PROPERTIES COMPILE_DEFINITIONS "SUNSHINE_TESTS_AI_ENABLED=$<BOOL:${SUNSHINE_ENABLE_AI}>")
 target_compile_options(${PROJECT_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${SUNSHINE_COMPILE_OPTIONS}>;$<$<COMPILE_LANGUAGE:CUDA>:${SUNSHINE_COMPILE_OPTIONS_CUDA};-std=c++17>)  # cmake-lint: disable=C0301
 target_link_options(${PROJECT_NAME} PRIVATE)
 

@@ -142,7 +142,11 @@ TEST_F(ConfigHttpRoutes, PreservesThePreSplitRouteInventory) {
       continue;
     }
 #endif
-    expected.emplace(entry.at("pattern").get<std::string>(), entry.at("method").get<std::string>());
+    const auto pattern = entry.at("pattern").get<std::string>();
+#if !SUNSHINE_TESTS_AI_ENABLED
+    if (pattern.starts_with("^/api/ai/")) continue;
+#endif
+    expected.emplace(pattern, entry.at("method").get<std::string>());
   }
   EXPECT_EQ(inventory(*server), expected);
   ASSERT_EQ(server->default_resource.size(), 1);
@@ -194,11 +198,11 @@ TEST_F(ConfigHttpRoutes, RejectsDuplicateOriginHeaders) {
 
 TEST_F(ConfigHttpRoutes, RequiresJsonBeforeCallingMutationHandlers) {
   auto client = connect();
-  const auto response = client->request("POST", "/api/ai/config", "{}");
-  EXPECT_EQ(response->status_code, "400 Bad Request");
+  const auto response = client->request("POST", "/api/apps", "{}");
+  ASSERT_EQ(response->status_code, "400 Bad Request");
   EXPECT_EQ(nlohmann::json::parse(response->content.string())["error"], "Content type not provided");
   const auto wrong_type = client->request("POST", "/api/apps", "{}", { { "Content-Type", "text/plain" } });
-  EXPECT_EQ(wrong_type->status_code, "400 Bad Request");
+  ASSERT_EQ(wrong_type->status_code, "400 Bad Request");
   EXPECT_EQ(nlohmann::json::parse(wrong_type->content.string())["error"], "Content type mismatch");
 }
 
@@ -213,6 +217,7 @@ TEST_F(ConfigHttpRoutes, FirstRunPasswordStillRejectsCrossSiteSources) {
   EXPECT_EQ(unauthenticated->header.find("Location")->second, "/welcome");
 }
 
+#if SUNSHINE_TESTS_AI_ENABLED
 TEST_F(ConfigHttpRoutes, AiPreflightRemainsAccessibleWithoutCredentials) {
   config::sunshine.username.clear();
   auto client = connect();
@@ -244,6 +249,24 @@ TEST_F(ConfigHttpRoutes, AiStreamStillRequiresInitialCredentialsAndJson) {
   EXPECT_EQ(response->header.count("Transfer-Encoding"), 0);
   EXPECT_EQ(client->request("POST", "/api/ai/chat/completions", R"({"stream":true})")->status_code, "400 Bad Request");
 }
+#else
+TEST_F(ConfigHttpRoutes, AiRoutesAreUnavailableWhenDisabled) {
+  for (const auto &[pattern, method] : inventory(*server)) {
+    EXPECT_FALSE(pattern.starts_with("^/api/ai/")) << pattern << ' ' << method;
+  }
+  auto client = connect();
+  EXPECT_TRUE(raw_get("/api/ai/config").starts_with("HTTP/1.1 444 No Response\r\n"));
+  EXPECT_TRUE(raw_get("/api/ai/models").starts_with("HTTP/1.1 444 No Response\r\n"));
+  for (const auto &path : {"/api/ai/config", "/api/ai/chat/completions"}) {
+    const auto response = client->request("POST", path, "{}", {{"Content-Type", "application/json"}});
+    EXPECT_EQ(response->status_code, "404 Not Found");
+    EXPECT_EQ(response->header.count("Transfer-Encoding"), 0);
+  }
+  const auto preflight = client->request("OPTIONS", "/api/ai/chat/completions");
+  EXPECT_EQ(preflight->status_code, "404 Not Found");
+  EXPECT_EQ(preflight->header.count("Access-Control-Allow-Methods"), 0);
+}
+#endif
 
 TEST_F(ConfigHttpRoutes, LocalLogoutAndUnknownRouteKeepTheirStatusCodes) {
   auto client = connect();
