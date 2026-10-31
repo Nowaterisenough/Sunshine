@@ -58,25 +58,34 @@ def verify_launch(executable: Path, qt_root: str):
     result = subprocess.run([str(executable), "--version"], env=environment, cwd=executable.parent,
                             capture_output=True, text=True, timeout=30)
     if result.returncode or "SunshinePanel" not in result.stdout:
-        raise RuntimeError(f"Deployed panel failed to launch: {result.stdout}\n{result.stderr}")
+        raise RuntimeError(f"Deployed panel failed to launch (exit {result.returncode}): {result.stdout}\n{result.stderr}")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--staging", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--platform", choices=("windows-x64", "macos-arm64"), required=True)
     parser.add_argument("--qt-version", default="6.12.0")
     parser.add_argument("--verify-run", action="store_true")
+    parser.add_argument("--verify-only", action="store_true", help="Check a deployed runtime without creating an archive")
     args = parser.parse_args()
     parts = args.qt_version.split(".")
     if len(parts) != 3 or parts[:2] != ["6", "12"] or not parts[2].isdecimal():
         parser.error("This package targets Qt 6.12.x")
 
-    staging, output = args.staging.resolve(), args.output.resolve()
+    staging = args.staging.resolve()
+    executable = verify_layout(staging, args.platform)
+    if args.verify_only:
+        if args.verify_run:
+            verify_launch(executable, os.environ.get("QT_ROOT_DIR", ""))
+        print(f"Verified deployed Qt runtime: {staging}")
+        return
+    if args.output is None:
+        parser.error("--output is required when creating an archive")
+    output = args.output.resolve()
     if staging == output or staging in output.parents:
         parser.error("The artifact directory must be outside staging")
-    verify_layout(staging, args.platform)
     output.mkdir(parents=True, exist_ok=True)
     repo = Path(__file__).resolve().parents[1]
     name = f"Sunshine-Qt-Panel-{args.qt_version}-{args.platform}"

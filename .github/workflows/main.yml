@@ -311,6 +311,13 @@ jobs:
           ninja -C build
           ccache --show-stats
 
+      - name: Verify deployed Qt runtime
+        shell: msys2 {0}
+        run: |
+          cmake --install build --config Release --component gui --prefix ./build/qt-runtime-check
+          QT_ROOT_DIR="$(cygpath -m "$MINGW_PREFIX")" python scripts/package-qt-panel.py \
+            --staging build/qt-runtime-check --platform windows-x64 --verify-only --verify-run
+
       - name: Run native tests
         shell: msys2 {0}
         run: ctest --test-dir build --output-on-failure
