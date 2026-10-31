@@ -1,6 +1,7 @@
 name: Build Qt Packages
 
 on:
+  workflow_call:
   workflow_dispatch:
   pull_request:
     paths:
@@ -12,6 +13,9 @@ on:
       - '.github/workflows/qt-panel.yml'
       - 'LICENSE'
   push:
+    # master builds the same matrix through the complete release workflow.
+    branches-ignore:
+      - master
     paths:
       - 'ui/qt/**'
       - 'CMakeLists.txt'

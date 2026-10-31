@@ -16,6 +16,16 @@ on:
       - master
   workflow_dispatch:
     inputs:
+      publish_existing:
+        description: 'Publish verified existing Windows and Qt builds without recompiling'
+        type: boolean
+        default: false
+      host_run_id:
+        description: 'Successful Build and Release run ID (publish_existing only)'
+        type: string
+      panel_run_id:
+        description: 'Successful Build Qt Packages run ID (publish_existing only)'
+        type: string
       rtx_hdr:
         description: 'RTX HDR support for development branches (official master always requires ON)'
         type: choice
@@ -26,7 +36,7 @@ on:
           - 'OFF'
 
 concurrency:
-  group: '${{ github.workflow }}-${{ github.ref }}'
+  group: '${{ github.workflow }}-${{ github.ref }}-${{ inputs.publish_existing && ''publish'' || ''build'' }}'
   cancel-in-progress: true
 
 # The pinned LizardByte release action still composes a Node.js 20 action.
@@ -37,8 +47,9 @@ env:
 jobs:
   setup_release:
     name: Setup Release
+    if: ${{ !inputs.publish_existing }}
     outputs:
-      publish_release: ${{ steps.setup_release_auto.outputs.publish_release || steps.setup_release_manual.outputs.publish_release }}
+      publish_upstream_release: ${{ steps.setup_release_auto.outputs.publish_release || steps.setup_release_manual.outputs.publish_release }}
       release_body: ${{ steps.filter_release_contributors.outputs.release_body || steps.setup_release_auto.outputs.release_body || steps.setup_release_manual.outputs.release_body }}
       release_commit: ${{ steps.setup_release_auto.outputs.release_commit || steps.setup_release_manual.outputs.release_commit }}
       release_generate_release_notes: ${{ steps.setup_release_auto.outputs.release_generate_release_notes || steps.setup_release_manual.outputs.release_generate_release_notes }}
@@ -62,8 +73,8 @@ jobs:
         id: setup_release_manual
         if: github.event_name == 'workflow_dispatch' || github.repository != 'AlkaidLab/foundation-sunshine'
         run: |
-          # Fork builds only upload artifacts. They do not require upstream
-          # merge settings, release tokens, or permission to publish a release.
+          # The upstream release action stays disabled for forks. The dedicated
+          # Qt release job below publishes all platforms with GITHUB_TOKEN.
           VERSION="v$(date -u +%Y.%m%d).$GITHUB_RUN_NUMBER"
           {
             echo "publish_release=false"
@@ -111,6 +122,7 @@ jobs:
 
   vdd_smoke:
     name: VDD helper smoke tests
+    if: ${{ !inputs.publish_existing }}
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -124,6 +136,7 @@ jobs:
 
   mat_smoke:
     name: MAT software regressions
+    if: ${{ !inputs.publish_existing }}
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
@@ -556,7 +569,7 @@ jobs:
           if-no-files-found: error
 
       - name: Create/Update GitHub Release
-        if: needs.setup_release.outputs.publish_release == 'true'
+        if: needs.setup_release.outputs.publish_upstream_release == 'true'
         uses: LizardByte/create-release-action@v2025.426.1549
         with:
           allowUpdates: true
@@ -566,3 +579,62 @@ jobs:
           prerelease: true
           tag: ${{ needs.setup_release.outputs.release_tag }}.杂鱼
           token: ${{ secrets.GH_BOT_TOKEN }}
+
+  qt_release_panels:
+    name: Qt release panels
+    needs: setup_release
+    if: github.event_name != 'pull_request' && github.repository != 'AlkaidLab/foundation-sunshine'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/qt-panel.yml
+
+  publish_qt_release:
+    name: Publish Qt Release
+    needs: [build_win, qt_release_panels, vdd_smoke, mat_smoke]
+    if: >-
+      always() && github.event_name != 'pull_request' &&
+      github.repository != 'AlkaidLab/foundation-sunshine' &&
+      needs.build_win.result == 'success' && needs.qt_release_panels.result == 'success' &&
+      needs.vdd_smoke.result == 'success' && needs.mat_smoke.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: qt-release-${{ github.run_id }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test release validation
+        run: python -m unittest discover -s tests/tools -p test_qt_release.py
+      - name: Validate packages and publish all platforms
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/publish-qt-release.py
+
+  publish_existing:
+    name: Publish existing Qt builds
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_existing
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: qt-release-${{ inputs.host_run_id }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test release validation
+        run: python -m unittest discover -s tests/tools -p test_qt_release.py
+      - name: Validate packages and publish all platforms
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HOST_RUN_ID: ${{ inputs.host_run_id }}
+          PANEL_RUN_ID: ${{ inputs.panel_run_id }}
+        run: python scripts/publish-qt-release.py --host-run "$HOST_RUN_ID" --panel-run "$PANEL_RUN_ID"
