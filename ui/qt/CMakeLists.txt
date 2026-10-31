@@ -40,7 +40,9 @@ if(WIN32)
 else()
     set(_panel_destination "bin")
 endif()
-install(TARGETS sunshine-gui BUNDLE DESTINATION . RUNTIME DESTINATION "${_panel_destination}" COMPONENT gui)
+install(TARGETS sunshine-gui
+    BUNDLE DESTINATION . COMPONENT gui
+    RUNTIME DESTINATION "${_panel_destination}" COMPONENT gui)
 if(WIN32)
     qt_generate_deploy_script(TARGET sunshine-gui OUTPUT_SCRIPT _panel_deploy CONTENT "
 set(QT_DEPLOY_BIN_DIR assets/gui)
