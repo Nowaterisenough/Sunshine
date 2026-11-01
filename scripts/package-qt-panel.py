@@ -25,7 +25,7 @@ def verify_layout(staging: Path, target: str) -> Path:
     else:
         bundle = staging / "sunshine-gui.app/Contents"
         executable = bundle / "MacOS/sunshine-gui"
-        required = [executable, bundle / "Info.plist", bundle / "PlugIns/platforms/libqcocoa.dylib",
+        required = [executable, bundle / "Info.plist", bundle / "Resources/sunshine.icns", bundle / "PlugIns/platforms/libqcocoa.dylib",
                     bundle / "PlugIns/imageformats/libqsvg.dylib",
                     bundle / "PlugIns/tls/libqsecuretransportbackend.dylib",
                     bundle / "Resources/qml/QtQuick/qmldir"]

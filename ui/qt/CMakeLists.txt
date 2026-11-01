@@ -47,6 +47,19 @@ endif()
 
 qt_add_executable(sunshine-gui WIN32 MACOSX_BUNDLE src/main.cpp)
 target_link_libraries(sunshine-gui PRIVATE sunshine_panel_client sunshine_panel_updates Qt6::Quick Qt6::QuickControls2 Qt6::Widgets Qt6::Svg)
+get_filename_component(_panel_brand "${CMAKE_CURRENT_SOURCE_DIR}/../../assets/brand" ABSOLUTE)
+qt_add_resources(sunshine-gui panel_brand PREFIX "/brand" BASE "${_panel_brand}"
+    FILES "${_panel_brand}/sunshine.svg")
+if(WIN32)
+    enable_language(RC)
+    set(PANEL_ICON_FILE "${_panel_brand}/sunshine.ico")
+    configure_file(cmake/panel_icon.rc.in generated/panel_icon.rc @ONLY)
+    target_sources(sunshine-gui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated/panel_icon.rc")
+elseif(APPLE)
+    target_sources(sunshine-gui PRIVATE "${_panel_brand}/sunshine.icns")
+    set_source_files_properties("${_panel_brand}/sunshine.icns" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_target_properties(sunshine-gui PROPERTIES MACOSX_BUNDLE_ICON_FILE sunshine.icns)
+endif()
 set_target_properties(sunshine-gui PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "Sunshine"
     MACOSX_BUNDLE_GUI_IDENTIFIER "org.sunshine-stream.panel"
@@ -61,7 +74,7 @@ qt_add_qml_module(sunshine-gui
         qml/SectionTitle.qml qml/Field.qml qml/Choice.qml qml/Toggle.qml qml/LineIcon.qml
         qml/HomePage.qml qml/AppsPage.qml qml/ClientsPage.qml
         qml/SettingsPage.qml qml/LogsPage.qml qml/ConnectionPage.qml qml/AboutPage.qml
-    RESOURCES assets/sunshine.svg assets/sunshine-mark.svg)
+    RESOURCES assets/sunshine-mark.svg assets/sunshine-mark-light.svg assets/sunshine-tray.svg)
 
 if(WIN32)
     set(_panel_destination "assets/gui")

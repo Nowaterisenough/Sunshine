@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - 'ui/qt/**'
+      - 'assets/brand/**'
+      - 'tools/brand-icons/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
       - 'cmake/prep/ui_options.cmake'
@@ -18,6 +20,8 @@ on:
       - master
     paths:
       - 'ui/qt/**'
+      - 'assets/brand/**'
+      - 'tools/brand-icons/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
       - 'cmake/prep/ui_options.cmake'

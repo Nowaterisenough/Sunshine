@@ -23,6 +23,18 @@
 #include <QSystemTrayIcon>
 #include <QTemporaryDir>
 
+static QIcon vectorIcon(const QString &resource) {
+    QSvgRenderer renderer(resource);
+    QIcon icon;
+    for (const int size : {16, 20, 24, 32, 48, 64, 128, 256, 512}) {
+        QPixmap image(size, size);
+        image.fill(Qt::transparent);
+        { QPainter painter(&image); renderer.render(&painter); }
+        icon.addPixmap(image);
+    }
+    return icon;
+}
+
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName("Sunshine");
@@ -118,11 +130,7 @@ int main(int argc, char *argv[]) {
         const auto dimensions = parser.value("size").split('x');
         if (dimensions.size() == 2) window->resize(qMax(720, dimensions[0].toInt()), qMax(480, dimensions[1].toInt()));
     }
-    QPixmap icon(64, 64);
-    icon.fill(Qt::transparent);
-    QSvgRenderer iconRenderer(QStringLiteral(":/qt/qml/Sunshine/Panel/assets/sunshine.svg"));
-    { QPainter painter(&icon); iconRenderer.render(&painter); }
-    app.setWindowIcon(QIcon(icon));
+    app.setWindowIcon(vectorIcon(QStringLiteral(":/brand/sunshine.svg")));
     app.setQuitOnLastWindowClosed(!trayAvailable);
 
     auto showWindow = [window] { window->show(); window->raise(); window->requestActivate(); };
@@ -167,7 +175,12 @@ int main(int argc, char *argv[]) {
     });
     menu.addSeparator();
     menu.addAction(QObject::tr("退出控制面板"), &app, quitPanel);
-    QSystemTrayIcon tray(app.windowIcon());
+    auto trayIcon = app.windowIcon();
+#ifdef Q_OS_MACOS
+    trayIcon = vectorIcon(QStringLiteral(":/qt/qml/Sunshine/Panel/assets/sunshine-tray.svg"));
+    trayIcon.setIsMask(true);
+#endif
+    QSystemTrayIcon tray(trayIcon);
     tray.setToolTip("Sunshine"); tray.setContextMenu(&menu);
     QObject::connect(&tray, &QSystemTrayIcon::activated, &app, [&](QSystemTrayIcon::ActivationReason reason) {
         if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) showWindow();

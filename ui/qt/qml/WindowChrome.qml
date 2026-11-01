@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Window
 
 Item {
     id: chrome
@@ -50,7 +51,7 @@ Item {
         x: chrome.macControls ? 134 : 10
         y: chrome.macControls ? 16 : 8
         spacing: 6
-        Image { source: "../assets/sunshine-mark.svg"; width: 16; height: 16; anchors.verticalCenter: parent.verticalCenter }
+        Image { source: Theme.dark ? "../assets/sunshine-mark.svg" : "../assets/sunshine-mark-light.svg"; width: 18; height: 18; sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio); anchors.verticalCenter: parent.verticalCenter }
         PanelText { text: "sunshine"; color: Theme.text; font.pixelSize: chrome.macControls ? 14 : 12; font.weight: chrome.macControls ? Font.DemiBold : Font.Normal; height: 18; verticalAlignment: Text.AlignVCenter }
     }
     PanelButton {

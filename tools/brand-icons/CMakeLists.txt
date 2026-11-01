@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.25)
+project(SunshineBrandIcons LANGUAGES CXX)
+find_package(Qt6 6.12 REQUIRED COMPONENTS Gui Svg)
+add_executable(brand-icons main.cpp)
+target_link_libraries(brand-icons PRIVATE Qt6::Gui Qt6::Svg)
+target_compile_features(brand-icons PRIVATE cxx_std_20)
