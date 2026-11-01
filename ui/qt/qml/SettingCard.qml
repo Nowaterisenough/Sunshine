@@ -11,9 +11,10 @@ Rectangle {
     property bool last: false
     property color descriptionColor: Theme.muted
     property int minimumHeight: Theme.cardHeight
+    readonly property int verticalPadding: Theme.windows ? 16 : 24
     readonly property bool wrapped: width < 530 && actions.implicitWidth > 230
     default property alias controls: actions.data
-    implicitHeight: wrapped ? words.implicitHeight + actions.implicitHeight + 34 : Math.max(minimumHeight, words.implicitHeight + 24, actions.implicitHeight + 24)
+    implicitHeight: wrapped ? words.implicitHeight + actions.implicitHeight + 34 : Math.max(minimumHeight, words.implicitHeight + verticalPadding, actions.implicitHeight + verticalPadding)
     Layout.fillWidth: true
     color: grouped ? "transparent" : Theme.card
     radius: grouped ? 0 : 12
