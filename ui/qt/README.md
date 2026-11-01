@@ -108,6 +108,9 @@ above. Legacy source remains available with
   Existing advanced application fields are preserved.
 - PIN pairing, rename, enable/disable and unpair clients, with confirmation for
   operations that interrupt a session.
+- Automatic tray-adjacent PIN window for incoming Moonlight pairing requests,
+  including while the main panel is hidden. A tray menu action reopens a
+  dismissed request; ordinary connections from paired clients do not prompt.
 - General, audio/video, input and network settings; save/discard drafts and
   restart through the acknowledged tray API.
 - Plain-text log filtering and export; bounded log reads, with no AI diagnosis.
@@ -128,6 +131,32 @@ redirects, and only permits the self-signed/hostname mismatch errors needed by
 Sunshine's local certificate. Other TLS errors remain fatal. First-run
 `/welcome` redirects open the native setup form. Passwords are not persisted
 by the panel.
+
+## Incoming pairing requests
+
+While the Qt panel is running (including in the tray), it subscribes to the
+host's existing `/api/tray/events` SSE endpoint. No streaming-host changes or
+high-frequency polling are required. The current fork's tray protocol v1
+provides the core instance, notification identity, revision and client name.
+Repeated state events do not reopen a dismissed popup. A fresh request, even
+from the same device, opens a new form with an empty PIN field. The popup is
+placed inside the tray screen's available desktop area and does not navigate
+the main window away from an unsaved form.
+
+Enter the four digits shown by Moonlight and optionally edit the device name.
+The panel rereads `/api/tray/state` before posting to `/api/pin`; a changed or
+expired request is not knowingly submitted. This preflight is not an atomic
+request binding: the existing PIN endpoint has no request-id argument. Changing
+the host port aborts outstanding operations and discards old responses.
+The Qt panel does not persist PINs or include them in its diagnostic output. A successful API reply
+means **PIN submitted**, not completion of Moonlight's subsequent cryptographic
+pairing handshake; the notification tells the user to confirm in Moonlight.
+
+Expiry, cancellation and disconnection invalidate the form. The listener uses
+the same bounded loopback-only TLS exception as the management client, accepts
+no redirects, limits frame sizes, detects silent connections, and reconnects
+with backoff. Exiting the panel ends this listener. A host without the tray SSE
+API still supports the manual Clients page but cannot send automatic prompts.
 
 ## Updates
 
@@ -178,6 +207,11 @@ metadata/redirects, TLS and HTTP errors, cancellation/retry, download integrity,
 post-download file changes, preferences, and explicit installer handoff through
 an injected launcher. CI retains successful rendered screenshots on both
 platforms; Windows also renders an 820 x 608 scene at 125% scale.
+
+`panel_pairing_tests` exercises fragmented event streams, deduplication, core
+restarts, disconnect/reconnect, stale requests and ports, PIN validation, failed
+submissions and retry. HTTPS UI smoke also checks automatic opening with the
+main window hidden, duplicate-event suppression, and expiry-driven dismissal.
 
 The HTTPS smoke test runs the **actual application** against a temporary local
 TLS fixture. It checks all eight pages, every settings tab, both themes,

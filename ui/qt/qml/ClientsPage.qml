@@ -13,7 +13,7 @@ ColumnLayout {
         SettingCard {
             grouped: true; last: true; title: qsTr("配对新设备"); description: qsTr("输入设备名称与配对码")
             Field { id: deviceName; objectName: "pairName"; implicitWidth: 190; placeholderText: qsTr("设备名称"); enabled: !host.busy }
-            Field { id: pin; objectName: "pairPin"; implicitWidth: 100; placeholderText: "PIN"; maximumLength: 8; validator: RegularExpressionValidator { regularExpression: /[0-9]{4,8}/ } enabled: !host.busy }
+            Field { id: pin; objectName: "pairPin"; implicitWidth: 100; placeholderText: "PIN"; maximumLength: 4; validator: RegularExpressionValidator { regularExpression: /[0-9]{4}/ } enabled: !host.busy }
             PanelButton { text: qsTr("配对"); primary: true; enabled: host.connected && !host.busy && pin.acceptableInput && deviceName.text.trim() !== ""; onClicked: host.pair(pin.text, deviceName.text) }
         }
     }

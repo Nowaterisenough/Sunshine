@@ -145,6 +145,7 @@ private slots:
         Network net; SunshineClient client(nullptr, &net);
         client.refresh(); QTRY_VERIFY(client.connected());
         client.pair("12ab", "TV"); QCOMPARE(net.count("POST", "/api/pin"), 0);
+        client.pair("123456", "TV"); QCOMPARE(net.count("POST", "/api/pin"), 0);
         client.pair("1234", "TV"); QTRY_COMPARE(net.count("POST", "/api/pin"), 1);
         const auto call = *std::find_if(net.calls.begin(), net.calls.end(), [](const Network::Call &c) { return c.method == "POST"; });
         QCOMPARE(call.body.value("pin").toString(), "1234"); QCOMPARE(call.body.value("name").toString(), "TV");

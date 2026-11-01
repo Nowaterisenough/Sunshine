@@ -1,4 +1,5 @@
 #include "sunshine_client.h"
+#include "pairing_controller.h"
 #include "update_controller.h"
 
 #include <QApplication>
@@ -18,6 +19,7 @@
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QRawFont>
+#include <QScreen>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QSslSocket>
@@ -81,6 +83,7 @@ int main(int argc, char *argv[]) {
     parser.addOption({"page", "Initial page (0-7).", "index", "0"});
     parser.addOption({"section", "Initial streaming settings section (0-3).", "index", "0"});
     parser.addOption({"screenshot", "Save a window image for visual verification.", "path"});
+    parser.addOption({"pairing-screenshot", "Save the automatic pairing popup for verification.", "path"});
     parser.addOption({"quit-after", "Exit after N milliseconds (UI smoke tests).", "milliseconds"});
     parser.addOption({"smoke-test", "Use isolated temporary settings and IPC for UI tests."});
     parser.addOption({"size", "Initial window size, for example 820x580.", "size"});
@@ -127,6 +130,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
     SunshineClient client;
+    PairingController pairing;
     UpdateController updates;
     if (parser.isSet("port")) client.setPort(parser.value("port").toInt());
     QQmlApplicationEngine engine;
@@ -139,6 +143,13 @@ int main(int argc, char *argv[]) {
     if (engine.rootObjects().isEmpty()) return 2;
     auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
     if (!window) return 3;
+    engine.setInitialProperties({{"pairing", QVariant::fromValue(&pairing)}});
+    engine.loadFromModule("Sunshine.Panel", "PairingWindow");
+    if (engine.rootObjects().size() != 2) return 2;
+    auto *pairingWindow = qobject_cast<QQuickWindow *>(engine.rootObjects().last());
+    if (!pairingWindow) return 3;
+    pairingWindow->setPersistentGraphics(false);
+    pairingWindow->setPersistentSceneGraph(false);
     if (parser.isSet("smoke-test")) {
         const auto resolvedFamily = QFontInfo(window->property("font").value<QFont>()).family();
         qInfo("QML window font resolved: %s", qPrintable(resolvedFamily));
@@ -189,6 +200,8 @@ int main(int argc, char *argv[]) {
 
     QMenu menu;
     menu.addAction(QObject::tr("打开 Sunshine"), &app, showWindow);
+    auto *completePairing = menu.addAction(QObject::tr("填写连接码"));
+    completePairing->setEnabled(false);
     menu.addAction(QObject::tr("刷新主机状态"), &client, &SunshineClient::refresh);
     menu.addAction(QObject::tr("检查更新"), &app, [&] {
         window->setProperty("pageIndex", 5); showWindow(); updates.check();
@@ -202,18 +215,68 @@ int main(int argc, char *argv[]) {
 #endif
     QSystemTrayIcon tray(trayIcon);
     tray.setToolTip("Sunshine"); tray.setContextMenu(&menu);
+    auto placePairing = [&] {
+        const QRect anchor = tray.geometry();
+        auto *screen = anchor.isEmpty() ? window->screen() : QGuiApplication::screenAt(anchor.center());
+        if (!screen) screen = QGuiApplication::primaryScreen();
+        if (screen) {
+            const auto available = screen->availableGeometry();
+            pairingWindow->setScreen(screen);
+            const int x = anchor.isEmpty() ? available.right() - pairingWindow->width() - 12 : anchor.center().x() - pairingWindow->width() / 2;
+            const int y = !anchor.isEmpty() && anchor.center().y() < available.center().y()
+                ? qMax(available.top() + 12, anchor.bottom() + 8) : available.bottom() - pairingWindow->height() - 12;
+            pairingWindow->setPosition(qBound(available.left() + 8, x, qMax(available.left() + 8, available.right() - pairingWindow->width() - 8)),
+                qBound(available.top() + 8, y, qMax(available.top() + 8, available.bottom() - pairingWindow->height() - 8)));
+        }
+    };
+    auto showPairing = [&] {
+        if (!pairing.pending()) return;
+        placePairing();
+        QMetaObject::invokeMethod(pairingWindow, "present");
+        if (parser.isSet("smoke-test")) qInfo("Pairing popup opened");
+    };
+    QObject::connect(pairingWindow, &QQuickWindow::heightChanged, &app, [&] {
+        if (pairingWindow->isVisible()) placePairing();
+    });
+    QObject::connect(&pairing, &PairingController::requestReceived, &app, showPairing);
+    QObject::connect(completePairing, &QAction::triggered, &app, showPairing);
+    QObject::connect(&tray, &QSystemTrayIcon::messageClicked, &app, showPairing);
+    QObject::connect(&pairing, &PairingController::changed, &app, [&] {
+        completePairing->setEnabled(pairing.pending());
+        tray.setToolTip(pairing.pending() ? QObject::tr("Sunshine · 等待填写连接码") : "Sunshine");
+    });
+    QObject::connect(&pairing, &PairingController::pinSubmitted, &app, [&] {
+        if (trayAvailable) tray.showMessage(QObject::tr("连接码已提交"), QObject::tr("请在 Moonlight 上确认配对结果。"), QSystemTrayIcon::Information, 4000);
+        QTimer::singleShot(1500, &client, &SunshineClient::refresh);
+    });
+    bool hostWasConnected = client.connected();
+    QObject::connect(&client, &SunshineClient::stateChanged, &app, [&] {
+        pairing.setPort(client.port());
+        if (client.connected() && !hostWasConnected) pairing.reconnectIfIdle();
+        hostWasConnected = client.connected();
+    });
     QObject::connect(&tray, &QSystemTrayIcon::activated, &app, [&](QSystemTrayIcon::ActivationReason reason) {
-        if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) showWindow();
+        if (reason == QSystemTrayIcon::Trigger && pairing.pending()) showPairing();
+        else if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) showWindow();
     });
     if (trayAvailable) tray.show();
-    if (parser.isSet("hidden") && trayAvailable) window->hide();
+    if (parser.isSet("hidden") && (trayAvailable || parser.isSet("smoke-test"))) window->hide();
     else navigate(parser.value("url"));
     client.startPolling();
+    pairing.start(client.port());
     if (!parser.isSet("smoke-test")) updates.start();
 
     if (parser.isSet("screenshot")) {
         const QString path = parser.value("screenshot");
         QTimer::singleShot(1800, &app, [window, path] { window->grabWindow().save(path); });
+    }
+    if (parser.isSet("pairing-screenshot")) {
+        const QString path = parser.value("pairing-screenshot");
+        QTimer::singleShot(1800, &app, [window, pairingWindow, path] {
+            qInfo("Pairing popup visible: %s", pairingWindow->isVisible() ? "true" : "false");
+            qInfo("Main window visible: %s", window->isVisible() ? "true" : "false");
+            if (pairingWindow->isVisible()) pairingWindow->grabWindow().save(path);
+        });
     }
     if (parser.isSet("quit-after"))
         QTimer::singleShot(qMax(2000, parser.value("quit-after").toInt()), &app, quitPanel);

@@ -1,7 +1,7 @@
 #include "sunshine_client.h"
+#include "local_https.h"
 
 #include <QCoreApplication>
-#include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -12,8 +12,6 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QSettings>
-#include <QSslConfiguration>
-#include <QSslError>
 
 namespace {
 bool failedStatus(const QJsonValue &value) {
@@ -87,26 +85,7 @@ void SunshineClient::request(const QByteArray &method, const QString &path, cons
     const QByteArray payload = method == "GET" ? QByteArray() : QJsonDocument(body).toJson(QJsonDocument::Compact);
     auto *reply = m_network->sendCustomRequest(req, method, payload);
     const int generation = m_generation;
-    connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors) {
-        const auto peerChain = reply->sslConfiguration().peerCertificateChain();
-        if (peerChain.isEmpty()) return;
-        const auto now = QDateTime::currentDateTimeUtc();
-        if (peerChain.first().effectiveDate() > now || peerChain.first().expiryDate() < now) {
-            qWarning("Local Sunshine certificate is outside its validity period.");
-            return;
-        }
-        for (const auto &error : errors) {
-            // Secure Transport reports a local self-signed leaf as an untrusted root.
-            if (error.error() == QSslError::CertificateUntrusted && peerChain.size() == 1 &&
-                peerChain.first().isSelfSigned() && error.certificate() == peerChain.first()) continue;
-            if (error.error() != QSslError::SelfSignedCertificate &&
-                error.error() != QSslError::HostNameMismatch) {
-                qWarning("Local Sunshine TLS error (%d): %s", error.error(), qPrintable(error.errorString()));
-                return;
-            }
-        }
-        reply->ignoreSslErrors(errors);
-    });
+    allowLocalSunshineCertificate(reply);
     connect(reply, &QIODevice::readyRead, reply, [reply] {
         if (reply->bytesAvailable() > 5 * 1024 * 1024) reply->abort();
     });
@@ -293,8 +272,8 @@ void SunshineClient::mutate(const QString &path, const QJsonObject &body, const 
     });
 }
 void SunshineClient::pair(const QString &pin, const QString &name) {
-    if (!QRegularExpression("^[0-9]{4,8}$").match(pin).hasMatch() || name.trimmed().isEmpty() || name.toUtf8().size() > 256) {
-        notify(tr("请输入 4–8 位数字 PIN 和设备名称。"), true); return;
+    if (!QRegularExpression("^[0-9]{4}$").match(pin).hasMatch() || name.trimmed().isEmpty() || name.toUtf8().size() > 256) {
+        notify(tr("请输入 4 位数字 PIN 和设备名称。"), true); return;
     }
     mutate("/api/pin", {{"pin", pin}, {"name", name.trimmed()}}, "pair");
 }

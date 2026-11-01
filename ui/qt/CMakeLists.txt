@@ -12,7 +12,8 @@ qt_standard_project_setup(REQUIRES 6.12)
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 option(SUNSHINE_QT_TESTS "Build native panel contract tests" ON)
 
-qt_add_library(sunshine_panel_client STATIC src/sunshine_client.cpp src/sunshine_client.h)
+qt_add_library(sunshine_panel_client STATIC src/sunshine_client.cpp src/sunshine_client.h
+    src/pairing_controller.cpp src/pairing_controller.h src/local_https.h)
 target_link_libraries(sunshine_panel_client PUBLIC Qt6::Core Qt6::Network)
 target_compile_features(sunshine_panel_client PUBLIC cxx_std_20)
 target_include_directories(sunshine_panel_client PUBLIC src)
@@ -79,7 +80,7 @@ qt_add_qml_module(sunshine-gui
         qml/SettingGroup.qml qml/SegmentedControl.qml qml/AppTile.qml qml/SessionsPage.qml
         qml/SectionTitle.qml qml/Field.qml qml/Choice.qml qml/Toggle.qml qml/LineIcon.qml
         qml/HomePage.qml qml/AppsPage.qml qml/ClientsPage.qml
-        qml/SettingsPage.qml qml/LogsPage.qml qml/ConnectionPage.qml qml/AboutPage.qml
+        qml/SettingsPage.qml qml/LogsPage.qml qml/ConnectionPage.qml qml/AboutPage.qml qml/PairingWindow.qml
     RESOURCES assets/sunshine-mark.svg assets/sunshine-mark-light.svg assets/sunshine-tray.svg)
 
 if(WIN32)
@@ -134,6 +135,10 @@ if(SUNSHINE_QT_TESTS)
     target_link_libraries(panel_client_tests PRIVATE sunshine_panel_client Qt6::Test)
     add_test(NAME panel_client_contract COMMAND panel_client_tests)
     set_tests_properties(panel_client_contract PROPERTIES TIMEOUT 45)
+    qt_add_executable(panel_pairing_tests tests/pairing_test.cpp)
+    target_link_libraries(panel_pairing_tests PRIVATE sunshine_panel_client Qt6::Test)
+    add_test(NAME panel_pairing_contract COMMAND panel_pairing_tests)
+    set_tests_properties(panel_pairing_contract PROPERTIES TIMEOUT 45)
     qt_add_executable(panel_update_tests tests/update_test.cpp)
     target_link_libraries(panel_update_tests PRIVATE sunshine_panel_updates Qt6::Test)
     add_test(NAME panel_update_contract COMMAND panel_update_tests)

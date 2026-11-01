@@ -20,6 +20,42 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.server.paths.append(self.path)
+        if self.path == "/api/tray/events":
+            if self.server.setup:
+                self.send_error(403)
+                return
+            stop, mode = self.server.scene_stop, self.server.pairing_scene
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            def state(revision, request_id=0):
+                return {"protocol_version": 1, "instance_id": "fixture-core", "owner": "gui",
+                    "capabilities": ["state-v1", "events-v1", "pairing"], "revision": revision,
+                    "status": "pairing" if request_id else "idle", "pairing_client_name": "另一台设备 · 配对测试" if request_id == 2 else "客厅电视 · 配对测试",
+                    "notification": {"id": request_id, "active": bool(request_id), "action": "open_pin" if request_id else ""}}
+            def send(value):
+                self.wfile.write(b"event: tray-state\ndata: " + json.dumps(value, ensure_ascii=False).encode() + b"\n\n")
+                self.wfile.flush()
+            try:
+                send(state(1))
+                if mode != "idle" and not stop.wait(0.25):
+                    send(state(2, 1))
+                    if mode == "repeat" and not stop.wait(0.25):
+                        send(state(3, 1))
+                        send(state(3, 1))
+                    if mode == "expired" and not stop.wait(0.5):
+                        send(state(3))
+                    if mode == "replacement" and not stop.wait(0.25):
+                        send(state(3))
+                        if not stop.wait(0.25):
+                            send(state(4, 2))
+                while not stop.wait(1):
+                    self.wfile.write(b": tray-keepalive\n\n")
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, ssl.SSLError):
+                pass
+            return
         if self.server.setup and self.path == "/api/config":
             self.send_response(307)
             self.send_header("Location", "/welcome")
@@ -69,6 +105,7 @@ def main():
             "-subj", "/CN=localhost", "-keyout", str(key), "-out", str(cert)], check=True, capture_output=True)
         server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         server.paths, server.setup = [], False
+        server.scene_stop, server.pairing_scene = threading.Event(), "idle"
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(cert, key)
         server.socket = context.wrap_socket(server.socket, server_side=True)
@@ -83,6 +120,7 @@ def main():
             if os.name == "nt":
                 cases += [("windows-reference", 0, ["--size", "820x608"])]
             for name, page, extra in cases:
+                server.scene_stop = threading.Event()
                 server.setup = name == "setup"
                 request_start = len(server.paths)
                 output = args.output / f"fixture-{name}.png"
@@ -93,6 +131,7 @@ def main():
                     "--page", str(page), "--screenshot", str(output), "--quit-after", "2600", *extra],
                     capture_output=True, text=True, timeout=20, env=scene_environment)
                 diagnostic = result.stdout + result.stderr
+                server.scene_stop.set()
                 output.with_suffix(".log").write_text(diagnostic, encoding="utf-8")
                 if "Panel font:" not in diagnostic:
                     raise RuntimeError(f"Page {name} did not capture Qt diagnostics")
@@ -104,6 +143,25 @@ def main():
                 if "/api/config" not in server.paths[request_start:]:
                     raise RuntimeError(f"Page {name} could not reach the HTTPS fixture:\n{diagnostic}")
                 print(f"PASS {name}: {output.name}", flush=True)
+            for mode in ["pairing", "repeat", "expired", "replacement"]:
+                server.scene_stop, server.pairing_scene, server.setup = threading.Event(), mode, False
+                output = args.output / f"fixture-pairing-{mode}.png"
+                output.unlink(missing_ok=True)
+                result = subprocess.run([str(args.binary.resolve()), "--smoke-test", "--hidden", "--port", str(server.server_port),
+                    "--pairing-screenshot", str(output), "--quit-after", "2600"],
+                    capture_output=True, text=True, timeout=20, env=environment)
+                server.scene_stop.set()
+                diagnostic = result.stdout + result.stderr
+                output.with_suffix(".log").write_text(diagnostic, encoding="utf-8")
+                expected_visible = mode != "expired"
+                expected_openings = 2 if mode == "replacement" else 1
+                if result.returncode or diagnostic.count("Pairing popup opened") != expected_openings or "Main window visible: false" not in diagnostic or (
+                    f"Pairing popup visible: {str(expected_visible).lower()}" not in diagnostic) or output.exists() != expected_visible:
+                    raise RuntimeError(f"Pairing popup {mode} failed:\n{diagnostic}")
+                if any(word in diagnostic for word in ["ReferenceError", "TypeError", "Binding loop", "Unable to assign", "Error decoding", "Cannot assign"]):
+                    raise RuntimeError(f"Pairing popup {mode} has QML errors:\n{diagnostic}")
+                print(f"PASS pairing popup {mode}: hidden main window, {expected_openings} automatic popup(s)", flush=True)
+            server.pairing_scene = "idle"
             assert all(path.startswith("/api/") and "/ai/" not in path for path in server.paths)
             for required in ["/api/config", "/api/apps", "/api/clients/list", "/api/runtime/sessions", "/api/logs"]:
                 assert required in server.paths, required
@@ -131,6 +189,7 @@ def main():
                 raise RuntimeError(f"Expired certificate was not safely rejected:\n{diagnostic}")
             print("PASS TLS boundary: expired self-signed certificate rejected")
         finally:
+            server.scene_stop.set()
             server.shutdown()
             server.server_close()
 
