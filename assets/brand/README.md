@@ -3,6 +3,8 @@
 The mark combines a rounded display, a rising half sun and a short stand.
 Warm amber represents sunlight; the display identifies the streaming product.
 Three short rays distinguish the sun without using a ring of fine strokes.
+The flat application icon uses solid charcoal (`#242429`) and amber (`#f2c475`),
+without gradients, highlights, shadows, or an outer rim.
 
 - `sunshine.svg` is the vector master for the application and installer icon.
 - `sunshine.png`, `sunshine.ico` and `sunshine.icns` are generated from that master.

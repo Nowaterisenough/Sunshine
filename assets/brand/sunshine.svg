@@ -1,20 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
-      <stop stop-color="#35333b"/>
-      <stop offset="1" stop-color="#1c1c22"/>
-    </linearGradient>
-    <linearGradient id="sunlight" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="24">
-      <stop stop-color="#ffe5a3"/>
-      <stop offset="1" stop-color="#efb25a"/>
-    </linearGradient>
-  </defs>
-  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#surface)"/>
-  <rect x="4.5" y="4.5" width="119" height="119" rx="27.5" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
-  <g transform="translate(16 10) scale(4)" stroke="url(#sunlight)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#242429"/>
+  <g transform="translate(16 10) scale(4)" stroke="#f2c475" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <rect x="2.25" y="4.75" width="19.5" height="13" rx="3.25" fill="none"/>
     <path d="M12 18v3M8 21h8M6.5 13.25h11" fill="none"/>
     <path d="M12 7v1M7 8.5l0.75 0.75M17 8.5l-0.75 0.75" fill="none" stroke-width="1.3"/>
-    <path d="M8.5 13.25a3.5 3.5 0 0 1 7 0Z" fill="url(#sunlight)" stroke="none"/>
+    <path d="M8.5 13.25a3.5 3.5 0 0 1 7 0Z" fill="#f2c475" stroke="none"/>
   </g>
 </svg>
