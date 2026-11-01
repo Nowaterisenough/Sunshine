@@ -77,13 +77,19 @@ def main():
             cases += [(f"settings-{section}", 3, ["--section", str(section)]) for section in range(1, 4)]
             cases += [("compact", 3, ["--size", "820x580"]), ("dark", 0, ["--dark"]), ("setup", 6, [])]
             cases += [("light", 0, ["--light"]), ("compact-apps", 1, ["--size", "720x520"])]
+            cases += [("compact-updates", 5, ["--size", "720x520"]), ("light-updates", 5, ["--light"])]
+            if os.name == "nt":
+                cases += [("windows-reference", 0, ["--size", "820x608"])]
             for name, page, extra in cases:
                 server.setup = name == "setup"
                 request_start = len(server.paths)
                 output = args.output / f"fixture-{name}.png"
+                scene_environment = environment.copy()
+                if name == "windows-reference":
+                    scene_environment["QT_SCALE_FACTOR"] = "1.25"
                 result = subprocess.run([str(args.binary.resolve()), "--smoke-test", "--port", str(server.server_port),
                     "--page", str(page), "--screenshot", str(output), "--quit-after", "2600", *extra],
-                    capture_output=True, text=True, timeout=20, env=environment)
+                    capture_output=True, text=True, timeout=20, env=scene_environment)
                 diagnostic = result.stdout + result.stderr
                 output.with_suffix(".log").write_text(diagnostic, encoding="utf-8")
                 if result.returncode or not output.exists() or any(word in diagnostic for word in

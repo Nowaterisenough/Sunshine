@@ -6,6 +6,7 @@ import QtCore
 ApplicationWindow {
     id: root
     required property var host
+    required property var updates
     property bool trayAvailable: false
     property bool quitting: false
     property bool forceDark: false
@@ -41,6 +42,7 @@ ApplicationWindow {
         id: chrome
         width: parent.width
         window: root
+        updates: root.updates
         currentPage: root.pageIndex
         onNavigate: function(page) { root.pageIndex = page }
         onRefresh: { host.refresh(); if (root.pageIndex === 4) host.refreshLogs() }
@@ -170,18 +172,10 @@ ApplicationWindow {
     }
     Component {
         id: aboutPage
-        ColumnLayout {
-            spacing: 12
-            SettingGroup {
-                SettingCard { grouped: true; title: qsTr("版本"); description: qsTr("Sunshine 控制面板"); PanelText { text: "1.0.0"; color: Theme.secondary; font.pixelSize: 13 } }
-                SettingCard { grouped: true; title: qsTr("主机版本"); description: qsTr("当前连接的 Sunshine 主机"); PanelText { text: host.config.version || qsTr("未连接"); color: Theme.muted; font.pixelSize: 13 } }
-                SettingCard { grouped: true; title: qsTr("界面框架"); description: qsTr("原生桌面界面"); PanelText { text: "Qt 6.12"; color: Theme.secondary; font.pixelSize: 13 } }
-                SettingCard {
-                    grouped: true; title: qsTr("应用主题"); description: qsTr("选择控制面板的外观")
-                    SegmentedControl { model: [qsTr("浅色"), qsTr("深色")]; currentIndex: Theme.dark ? 1 : 0; onActivated: function(index) { preferences.magpieDarkTheme = index === 1; Theme.dark = preferences.magpieDarkTheme } }
-                }
-                SettingCard { grouped: true; last: true; title: qsTr("开源许可"); description: qsTr("Sunshine 的采集、编码和串流内核保持独立"); PanelText { text: "GPL-3.0"; color: Theme.muted; font.pixelSize: 13 } }
-            }
+        AboutPage {
+            host: root.host
+            updates: root.updates
+            onThemeSelected: function(dark) { preferences.magpieDarkTheme = dark; Theme.dark = dark }
         }
     }
 }

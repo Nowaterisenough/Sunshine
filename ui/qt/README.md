@@ -13,7 +13,7 @@ This is an independent local management process. Capture, encoding, audio,
 GameStream pairing, transport, and the existing ABR algorithms remain in the
 original Sunshine host. The panel uses its existing HTTPS API on
 `127.0.0.1:47990`, with an editable management port. It does not embed a browser,
-WebView2, Tauri, an AI assistant, analytics, advertisements, or remote content.
+WebView2, Tauri, an AI assistant, analytics, advertisements, or a remote web UI.
 
 ## Build the panel
 
@@ -114,6 +114,7 @@ above. Legacy source remains available with
 - First-run account creation, local port selection and portable host launch.
 - Dark appearance by default, optional light theme, vector icons, native tray and single instance.
 - Application search/type filters and settings search across all categories.
+- Native update checking, release notes, verified downloads and Windows installer handoff.
 
 Saving configuration first reads the latest complete API snapshot and overlays
 only edited fields. Changes to the same field in another editor are rejected.
@@ -122,11 +123,48 @@ list has not changed and invalidate the editor when it has. The server has no
 atomic revision/ETag facility, so an external write *between* the final read
 and write cannot be eliminated without changing its API.
 
-The panel only connects to loopback, bypasses HTTP proxies, does not follow
+The host API client only connects to loopback, bypasses HTTP proxies, does not follow
 redirects, and only permits the self-signed/hostname mismatch errors needed by
 Sunshine's local certificate. Other TLS errors remain fatal. First-run
 `/welcome` redirects open the native setup form. Passwords are not persisted
 by the panel.
+
+## Updates
+
+Settings > About and the tray menu provide **Check for updates**. A top-bar
+button appears when a new version is available. The About page follows the
+reference's grouped rows for version, release notes, update button, automatic
+checks, interval, channel, and automatic download. Preferences persist locally.
+
+The updater reads the latest 100 GitHub releases from
+`Nowaterisenough/Sunshine`, accepting published `qt-<commit>` releases only.
+The default channel includes prereleases (the fork's Qt releases currently use
+that channel). Stable-only mode never falls back to legacy upstream builds.
+Git ancestry comparison prevents downgrade or switching to an unrelated branch.
+The panel embeds its own source commit, rather than comparing the connected
+host's version string or a constant `1.0.0`.
+
+| Running distribution | Selected update | After download |
+| --- | --- | --- |
+| Windows x64 installed host (`unins000.exe` beside `sunshine.exe`) | Full Windows installer | Explicit confirmation, UAC, then exit panel and run Inno upgrade |
+| Windows x64 portable host | Portable x64 ZIP | Open download directory; exit and replace manually |
+| Windows x64 standalone panel | Qt panel win-x64 ZIP | Open download directory; replace the panel manually |
+| macOS arm64 panel | Qt panel macos-arm64 ZIP | Open download directory; exit and replace the App manually |
+
+Automatic checks default to once at startup and every hour; intervals are
+30 minutes, 1 hour, 6 hours, and 24 hours. Automatic downloading is **off** by
+default. No mode installs automatically or interrupts streaming without an
+explicit installation confirmation. ZIP packages do not perform installer
+cleanup or in-place replacement, and the macOS package remains panel-only.
+
+The updater has its own network manager with normal TLS verification and
+system proxy support. It never inherits the loopback client's self-signed
+certificate exception. HTTPS redirects are limited to GitHub release/API/CDN
+hosts, package names are matched by platform and installation type, and a
+GitHub SHA-256 digest is required. Downloads stream to an atomic cache file,
+check size and hash, and are checked again before opening. Cancellation,
+network failures, insufficient disk space, and failed elevation leave a
+retryable state. No executable is run by the update tests.
 
 ## Verification
 
@@ -134,6 +172,12 @@ by the panel.
 string and boolean status handling, setup redirects, malformed responses,
 app index races, PIN validation, stale replies after port changes, log export,
 and the acknowledged restart endpoint.
+
+`panel_update_tests` covers package selection, channels, ancestry, unsafe
+metadata/redirects, TLS and HTTP errors, cancellation/retry, download integrity,
+post-download file changes, preferences, and explicit installer handoff through
+an injected launcher. CI retains successful rendered screenshots on both
+platforms; Windows also renders an 820 x 608 scene at 125% scale.
 
 The HTTPS smoke test runs the **actual application** against a temporary local
 TLS fixture. It checks all eight pages, every settings tab, both themes,

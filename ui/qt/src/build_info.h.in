@@ -1,0 +1,3 @@
+#pragma once
+#define PANEL_COMMIT "@PANEL_COMMIT@"
+#define PANEL_COMMIT_TIME "@PANEL_COMMIT_TIME@"

@@ -40,6 +40,8 @@ Canvas {
         } else if (name === "refresh") {
             c.arc(12, 12, 8, -Math.PI * 0.8, Math.PI * 0.9)
             c.moveTo(4, 4); c.lineTo(4, 10); c.lineTo(10, 10)
+        } else if (name === "update") {
+            line(12, 20, 12, 4); line(12, 4, 6, 10); line(12, 4, 18, 10)
         } else if (name === "add") {
             line(12, 3, 12, 21); line(3, 12, 21, 12)
         } else if (name === "folder") {

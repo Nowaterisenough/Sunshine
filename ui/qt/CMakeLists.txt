@@ -17,8 +17,36 @@ target_link_libraries(sunshine_panel_client PUBLIC Qt6::Core Qt6::Network)
 target_compile_features(sunshine_panel_client PUBLIC cxx_std_20)
 target_include_directories(sunshine_panel_client PUBLIC src)
 
+find_package(Git QUIET)
+set(PANEL_COMMIT "")
+set(PANEL_COMMIT_TIME "")
+if(GIT_FOUND)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse HEAD
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" OUTPUT_VARIABLE PANEL_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" log -1 --format=%cI
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" OUTPUT_VARIABLE PANEL_COMMIT_TIME OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --symbolic-full-name HEAD
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" OUTPUT_VARIABLE _panel_ref OUTPUT_STRIP_TRAILING_WHITESPACE)
+    foreach(_ref IN ITEMS HEAD "${_panel_ref}")
+        execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --git-path "${_ref}"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" OUTPUT_VARIABLE _ref_path OUTPUT_STRIP_TRAILING_WHITESPACE)
+        get_filename_component(_ref_path "${_ref_path}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+        if(EXISTS "${_ref_path}")
+            set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_ref_path}")
+        endif()
+    endforeach()
+endif()
+configure_file(src/build_info.h.in generated/build_info.h @ONLY)
+qt_add_library(sunshine_panel_updates STATIC src/update_controller.cpp src/update_controller.h)
+target_link_libraries(sunshine_panel_updates PUBLIC Qt6::Core Qt6::Network Qt6::Gui)
+target_include_directories(sunshine_panel_updates PUBLIC src PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_compile_features(sunshine_panel_updates PUBLIC cxx_std_20)
+if(WIN32)
+    target_link_libraries(sunshine_panel_updates PRIVATE shell32)
+endif()
+
 qt_add_executable(sunshine-gui WIN32 MACOSX_BUNDLE src/main.cpp)
-target_link_libraries(sunshine-gui PRIVATE sunshine_panel_client Qt6::Quick Qt6::QuickControls2 Qt6::Widgets)
+target_link_libraries(sunshine-gui PRIVATE sunshine_panel_client sunshine_panel_updates Qt6::Quick Qt6::QuickControls2 Qt6::Widgets)
 set_target_properties(sunshine-gui PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "Sunshine"
     MACOSX_BUNDLE_GUI_IDENTIFIER "org.sunshine-stream.panel"
@@ -32,7 +60,7 @@ qt_add_qml_module(sunshine-gui
         qml/SettingGroup.qml qml/SegmentedControl.qml qml/AppTile.qml qml/SessionsPage.qml
         qml/SectionTitle.qml qml/Field.qml qml/Choice.qml qml/Toggle.qml qml/LineIcon.qml
         qml/HomePage.qml qml/AppsPage.qml qml/ClientsPage.qml
-        qml/SettingsPage.qml qml/LogsPage.qml qml/ConnectionPage.qml
+        qml/SettingsPage.qml qml/LogsPage.qml qml/ConnectionPage.qml qml/AboutPage.qml
     RESOURCES assets/sunshine.svg assets/sunshine-mark.svg)
 
 if(WIN32)
@@ -85,4 +113,8 @@ if(SUNSHINE_QT_TESTS)
     target_link_libraries(panel_client_tests PRIVATE sunshine_panel_client Qt6::Test)
     add_test(NAME panel_client_contract COMMAND panel_client_tests)
     set_tests_properties(panel_client_contract PROPERTIES TIMEOUT 45)
+    qt_add_executable(panel_update_tests tests/update_test.cpp)
+    target_link_libraries(panel_update_tests PRIVATE sunshine_panel_updates Qt6::Test)
+    add_test(NAME panel_update_contract COMMAND panel_update_tests)
+    set_tests_properties(panel_update_contract PROPERTIES TIMEOUT 45)
 endif()

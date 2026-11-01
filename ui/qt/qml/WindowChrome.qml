@@ -4,6 +4,7 @@ import QtQuick.Controls
 Item {
     id: chrome
     required property var window
+    required property var updates
     property int currentPage: 0
     readonly property bool macControls: Qt.platform.os === "osx"
     readonly property int navigationY: macControls ? 10 : 40
@@ -61,7 +62,7 @@ Item {
     }
     Flickable {
         readonly property real leftLimit: chrome.macControls ? 238 : 56
-        readonly property real rightLimit: chrome.width - 84
+        readonly property real rightLimit: chrome.width - utilities.width - 26
         x: chrome.macControls ? leftLimit : Math.max(leftLimit, (chrome.width - contentWidth) / 2)
         y: chrome.navigationY
         width: Math.min(contentWidth, rightLimit - x); height: 28
@@ -86,8 +87,15 @@ Item {
         }
     }
     Row {
+        id: utilities
         anchors.right: parent.right; anchors.rightMargin: 10
         y: chrome.navigationY; spacing: 4
+        PanelButton {
+            visible: updates.showButton && updates.available
+            primary: true; text: updates.state === "downloading" ? Math.round(updates.progress * 100) + "%" : qsTr("更新"); symbol: "update"
+            Accessible.name: qsTr("软件更新")
+            onClicked: chrome.navigate(5)
+        }
         PanelButton { subtle: true; symbol: "refresh"; Accessible.name: qsTr("刷新"); ToolTip.visible: hovered; ToolTip.text: qsTr("刷新"); onClicked: chrome.refresh() }
         PanelButton { subtle: ![3,5,6].includes(chrome.currentPage); symbol: "connection"; implicitWidth: 28; Accessible.name: qsTr("设置"); ToolTip.visible: hovered; ToolTip.text: qsTr("设置"); onClicked: chrome.navigate(3) }
     }

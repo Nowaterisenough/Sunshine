@@ -1,4 +1,5 @@
 #include "sunshine_client.h"
+#include "update_controller.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -24,7 +25,7 @@ int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName("Sunshine");
     QCoreApplication::setApplicationName("SunshinePanel");
-    QCoreApplication::setApplicationVersion("1.0.0");
+    QCoreApplication::setApplicationVersion("qt-" + UpdateController::environment().commit.left(12));
     QQuickStyle::setStyle("Basic");
     // QML Text does not inherit the Controls font; use the same explicit family
     // for both, including CJK glyphs on Windows installations without Variable UI.
@@ -99,10 +100,11 @@ int main(int argc, char *argv[]) {
     }
 #endif
     SunshineClient client;
+    UpdateController updates;
     if (parser.isSet("port")) client.setPort(parser.value("port").toInt());
     QQmlApplicationEngine engine;
     const bool trayAvailable = QSystemTrayIcon::isSystemTrayAvailable();
-    engine.setInitialProperties({{"host", QVariant::fromValue(&client)},
+    engine.setInitialProperties({{"host", QVariant::fromValue(&client)}, {"updates", QVariant::fromValue(&updates)},
         {"trayAvailable", trayAvailable}, {"forceDark", parser.isSet("dark")}, {"forceLight", parser.isSet("light")},
         {"settingsCategory", qBound(0, parser.value("section").toInt(), 3)},
         {"initialPage", qBound(0, parser.value("page").toInt(), 7)}});
@@ -119,6 +121,7 @@ int main(int argc, char *argv[]) {
 
     auto showWindow = [window] { window->show(); window->raise(); window->requestActivate(); };
     auto quitPanel = [&] { window->setProperty("quitting", true); app.quit(); };
+    QObject::connect(&updates, &UpdateController::installerStarted, &app, quitPanel);
     auto navigate = [&](const QString &urlText) {
         if (!urlText.isEmpty()) {
             const QUrl url(urlText);
@@ -153,6 +156,9 @@ int main(int argc, char *argv[]) {
     QMenu menu;
     menu.addAction(QObject::tr("打开 Sunshine"), &app, showWindow);
     menu.addAction(QObject::tr("刷新主机状态"), &client, &SunshineClient::refresh);
+    menu.addAction(QObject::tr("检查更新"), &app, [&] {
+        window->setProperty("pageIndex", 5); showWindow(); updates.check();
+    });
     menu.addSeparator();
     menu.addAction(QObject::tr("退出控制面板"), &app, quitPanel);
     QSystemTrayIcon tray(app.windowIcon());
@@ -164,6 +170,7 @@ int main(int argc, char *argv[]) {
     if (parser.isSet("hidden") && trayAvailable) window->hide();
     else navigate(parser.value("url"));
     client.startPolling();
+    if (!parser.isSet("smoke-test")) updates.start();
 
     if (parser.isSet("screenshot")) {
         const QString path = parser.value("screenshot");
