@@ -20,7 +20,7 @@ This document replaces the earlier, incorrect WinUI design reference.
 | Main navigation | Windows: separate 32 px caption and centered tabs at y=40; macOS: compact 48 px single row |
 | Content | 18 px side margins; starts 6 px below chrome, or below settings tabs |
 | Grouped rows | Windows 54 px / macOS 66 px minimum; no gaps; 12 px group radius |
-| Typography | Bundled Noto Sans SC on Windows / PingFang SC on macOS; 14 px titles; 13 px descriptions and controls |
+| Typography | Bundled Noto Sans CJK SC on Windows / PingFang SC on macOS; 14 px titles; 13 px descriptions and controls |
 | Settings switches | 30 px segmented control with close/open choices |
 | Device switches | 36 x 20 px; white on-state track and dark thumb |
 | Application grid | Three columns at full width, 12 px gaps, 144 px cards |
@@ -30,7 +30,7 @@ implemented in Qt Quick; no original app source, brand assets or fonts are
 copied. macOS gets traffic-light window controls, Windows gets appropriate
 caption controls. Plain QML Text uses the same explicit sans-serif family as
 Controls, through PanelText; font selection is logged by the screenshot runner.
-Windows ships Noto Sans SC under the SIL Open Font License, avoiding serif
+Windows ships Noto Sans CJK SC under the SIL Open Font License, avoiding serif
 fallback on machines without the optional Chinese system fonts. The runner
 forces stderr logging on GUI executables and requires the font diagnostic.
 The Windows layout is checked on Windows, since macOS rendering cannot verify

@@ -1,15 +1,17 @@
 # Windows Chinese UI font
 
-Noto Sans SC is distributed under the SIL Open Font License 1.1. The complete
+Noto Sans CJK SC is distributed under the SIL Open Font License 1.1. The complete
 license is in `OFL-NotoSansSC.txt` and is installed alongside the Windows panel.
-The unmodified variable font is renamed locally for a shell-safe filename.
+The unmodified static Regular face avoids variable-font selection differences
+between Windows font engines.
 
-Source: https://github.com/google/fonts/tree/a85815a42757630ce188fdad368c2dfc444d4773/ofl/notosanssc
+Source: https://github.com/notofonts/noto-cjk/tree/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans
 
-- Original filename: `NotoSansSC[wght].ttf`
-- Font Git blob: `fb0637bafbcd804fe32152370a1225990745b4bc`
-- License Git blob: `1c9f43281b8f216c5461fe9ac729afbade7724e4`
+- Original filename: `OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf`
+- Font Git blob: `dc15562470b4f842321894787a0d066879ccff8b`
+- License Git blob: `d952d62c065f3f35fb83a173496e90b21525aef3`
 
 Windows loads this font from `fonts/` before creating the UI. Package validation
-requires both the font and license, and startup checks Chinese glyph coverage.
+requires both the font and license. Startup checks Chinese glyph coverage, and
+smoke mode checks the font actually resolved for the QML application window.
 macOS uses its system PingFang SC font and does not ship this font file.

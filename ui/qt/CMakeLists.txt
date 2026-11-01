@@ -55,7 +55,7 @@ if(WIN32)
     set(PANEL_ICON_FILE "${_panel_brand}/sunshine.ico")
     configure_file(cmake/panel_icon.rc.in generated/panel_icon.rc @ONLY)
     target_sources(sunshine-gui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated/panel_icon.rc")
-    set(_panel_font "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/NotoSansSC-Variable.ttf")
+    set(_panel_font "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/NotoSansCJKsc-Regular.otf")
     set_property(TARGET sunshine-gui APPEND PROPERTY LINK_DEPENDS "${_panel_font}")
     add_custom_command(TARGET sunshine-gui POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E make_directory "$<TARGET_FILE_DIR:sunshine-gui>/fonts"

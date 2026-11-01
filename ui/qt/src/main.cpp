@@ -6,6 +6,7 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFontDatabase>
+#include <QFontInfo>
 #include <QIcon>
 #include <QJsonDocument>
 #include <QLocalServer>
@@ -45,7 +46,7 @@ int main(int argc, char *argv[]) {
     // Plain QML Text and Controls share one family, including CJK glyphs.
 #ifdef Q_OS_WIN
     const int fontId = QFontDatabase::addApplicationFont(
-        QCoreApplication::applicationDirPath() + "/fonts/NotoSansSC-Variable.ttf");
+        QCoreApplication::applicationDirPath() + "/fonts/NotoSansCJKsc-Regular.otf");
     const QStringList fontCandidates = QFontDatabase::applicationFontFamilies(fontId);
     if (fontId < 0 || fontCandidates.isEmpty()) {
         qCritical("The bundled Noto Sans SC font is missing or invalid.");
@@ -138,6 +139,13 @@ int main(int argc, char *argv[]) {
     if (engine.rootObjects().isEmpty()) return 2;
     auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
     if (!window) return 3;
+    if (parser.isSet("smoke-test")) {
+        const auto resolvedFamily = QFontInfo(window->property("font").value<QFont>()).family();
+        qInfo("QML window font resolved: %s", qPrintable(resolvedFamily));
+#ifdef Q_OS_WIN
+        if (!resolvedFamily.startsWith("Noto Sans CJK SC")) return 6;
+#endif
+    }
     if (parser.isSet("size")) {
         const auto dimensions = parser.value("size").split('x');
         if (dimensions.size() == 2) window->resize(qMax(720, dimensions[0].toInt()), qMax(480, dimensions[1].toInt()));

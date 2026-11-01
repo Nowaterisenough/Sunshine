@@ -96,6 +96,8 @@ def main():
                 output.with_suffix(".log").write_text(diagnostic, encoding="utf-8")
                 if "Panel font:" not in diagnostic:
                     raise RuntimeError(f"Page {name} did not capture Qt diagnostics")
+                if os.name == "nt" and "QML window font resolved: Noto Sans CJK SC" not in diagnostic:
+                    raise RuntimeError(f"Page {name} fell back from the bundled CJK font:\n{diagnostic}")
                 if result.returncode or not output.exists() or any(word in diagnostic for word in
                     ["ReferenceError", "TypeError", "Binding loop", "Unable to assign", "failed to load", "is not a type", "Cannot assign", "Error decoding", "Cannot open"]):
                     raise RuntimeError(f"Page {name} failed ({result.returncode}):\n{diagnostic}")
