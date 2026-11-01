@@ -16,6 +16,7 @@
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QRawFont>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QSslSocket>
@@ -41,10 +42,15 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setApplicationName("SunshinePanel");
     QCoreApplication::setApplicationVersion("qt-" + UpdateController::environment().commit.left(12));
     QQuickStyle::setStyle("Basic");
-    // QML Text does not inherit the Controls font; use the same explicit family
-    // for both, including CJK glyphs on Windows installations without Variable UI.
+    // Plain QML Text and Controls share one family, including CJK glyphs.
 #ifdef Q_OS_WIN
-    const QStringList fontCandidates{"Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI"};
+    const int fontId = QFontDatabase::addApplicationFont(
+        QCoreApplication::applicationDirPath() + "/fonts/NotoSansSC-Variable.ttf");
+    const QStringList fontCandidates = QFontDatabase::applicationFontFamilies(fontId);
+    if (fontId < 0 || fontCandidates.isEmpty()) {
+        qCritical("The bundled Noto Sans SC font is missing or invalid.");
+        return 6;
+    }
 #elif defined(Q_OS_MACOS)
     const QStringList fontCandidates{"PingFang SC", "Helvetica Neue"};
 #else
@@ -57,6 +63,12 @@ int main(int argc, char *argv[]) {
     panelFont.setPixelSize(14);
     panelFont.setStyleHint(QFont::SansSerif);
     app.setFont(panelFont);
+#ifdef Q_OS_WIN
+    if (!QRawFont::fromFont(panelFont).supportsCharacter(0x4e2dU)) {
+        qCritical("The panel font cannot render Chinese text.");
+        return 6;
+    }
+#endif
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Sunshine native control panel (Qt 6.12)");

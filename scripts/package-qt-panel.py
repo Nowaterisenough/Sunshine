@@ -17,7 +17,7 @@ def verify_layout(staging: Path, target: str) -> Path:
         gui = staging / "assets/gui"
         executable = gui / "sunshine-gui.exe"
         required = [executable, gui / "qt.conf", gui / "plugins/platforms/qwindows.dll", gui / "plugins/imageformats/qsvg.dll",
-                    gui / "qml/QtQuick/qmldir"]
+                    gui / "qml/QtQuick/qmldir", gui / "fonts/NotoSansSC-Variable.ttf", gui / "licenses/OFL-NotoSansSC.txt"]
         required += [gui / f"Qt6{name}.dll" for name in
                      ("Core", "Gui", "Network", "Widgets", "Qml", "Quick", "QuickControls2", "Svg")]
         if not (gui / "libstdc++-6.dll").is_file():

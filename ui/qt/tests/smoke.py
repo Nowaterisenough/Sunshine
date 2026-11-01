@@ -54,6 +54,8 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     environment = os.environ.copy()
+    # Windows GUI executables otherwise send Qt warnings to the debugger only.
+    environment["QT_FORCE_STDERR_LOGGING"] = "1"
     for name in ("QML_IMPORT_PATH", "QML2_IMPORT_PATH", "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH",
                  "DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH", "LD_LIBRARY_PATH"):
         environment.pop(name, None)
@@ -92,6 +94,8 @@ def main():
                     capture_output=True, text=True, timeout=20, env=scene_environment)
                 diagnostic = result.stdout + result.stderr
                 output.with_suffix(".log").write_text(diagnostic, encoding="utf-8")
+                if "Panel font:" not in diagnostic:
+                    raise RuntimeError(f"Page {name} did not capture Qt diagnostics")
                 if result.returncode or not output.exists() or any(word in diagnostic for word in
                     ["ReferenceError", "TypeError", "Binding loop", "Unable to assign", "failed to load", "is not a type", "Cannot assign", "Error decoding", "Cannot open"]):
                     raise RuntimeError(f"Page {name} failed ({result.returncode}):\n{diagnostic}")

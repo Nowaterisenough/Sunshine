@@ -55,6 +55,12 @@ if(WIN32)
     set(PANEL_ICON_FILE "${_panel_brand}/sunshine.ico")
     configure_file(cmake/panel_icon.rc.in generated/panel_icon.rc @ONLY)
     target_sources(sunshine-gui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated/panel_icon.rc")
+    set(_panel_font "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/NotoSansSC-Variable.ttf")
+    set_property(TARGET sunshine-gui APPEND PROPERTY LINK_DEPENDS "${_panel_font}")
+    add_custom_command(TARGET sunshine-gui POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "$<TARGET_FILE_DIR:sunshine-gui>/fonts"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_panel_font}" "$<TARGET_FILE_DIR:sunshine-gui>/fonts/"
+        VERBATIM)
 elseif(APPLE)
     target_sources(sunshine-gui PRIVATE "${_panel_brand}/sunshine.icns")
     set_source_files_properties("${_panel_brand}/sunshine.icns" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
@@ -78,6 +84,8 @@ qt_add_qml_module(sunshine-gui
 
 if(WIN32)
     set(_panel_destination "assets/gui")
+    install(FILES "${_panel_font}" DESTINATION "${_panel_destination}/fonts" COMPONENT gui)
+    install(FILES assets/fonts/OFL-NotoSansSC.txt DESTINATION "${_panel_destination}/licenses" COMPONENT gui)
 else()
     set(_panel_destination "bin")
 endif()
