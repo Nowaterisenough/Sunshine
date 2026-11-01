@@ -16,20 +16,21 @@ def verify_layout(staging: Path, target: str) -> Path:
     if target == "windows-x64":
         gui = staging / "assets/gui"
         executable = gui / "sunshine-gui.exe"
-        required = [executable, gui / "qt.conf", gui / "plugins/platforms/qwindows.dll",
+        required = [executable, gui / "qt.conf", gui / "plugins/platforms/qwindows.dll", gui / "plugins/imageformats/qsvg.dll",
                     gui / "qml/QtQuick/qmldir"]
         required += [gui / f"Qt6{name}.dll" for name in
-                     ("Core", "Gui", "Network", "Widgets", "Qml", "Quick", "QuickControls2")]
+                     ("Core", "Gui", "Network", "Widgets", "Qml", "Quick", "QuickControls2", "Svg")]
         if not (gui / "libstdc++-6.dll").is_file():
             required += [gui / name for name in ("msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll")]
     else:
         bundle = staging / "sunshine-gui.app/Contents"
         executable = bundle / "MacOS/sunshine-gui"
         required = [executable, bundle / "Info.plist", bundle / "PlugIns/platforms/libqcocoa.dylib",
+                    bundle / "PlugIns/imageformats/libqsvg.dylib",
                     bundle / "PlugIns/tls/libqsecuretransportbackend.dylib",
                     bundle / "Resources/qml/QtQuick/qmldir"]
         required += [bundle / f"Frameworks/Qt{name}.framework/Versions/A/Qt{name}"
-                     for name in ("Core", "Gui", "Network", "Qml", "Quick")]
+                     for name in ("Core", "Gui", "Network", "Qml", "Quick", "Svg")]
         if executable.is_file():
             architectures = subprocess.check_output(["lipo", "-archs", str(executable)], text=True).split()
             if "arm64" not in architectures:

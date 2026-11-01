@@ -18,7 +18,7 @@ WebView2, Tauri, an AI assistant, analytics, advertisements, or a remote web UI.
 ## Build the panel
 
 Install a matching Qt 6.12 C++ kit with Core, Gui, Network, Widgets, Quick,
-QuickControls2 and Test. On Windows, the Qt kit must match the compiler ABI;
+QuickControls2, Svg and Test. On Windows, the Qt kit must match the compiler ABI;
 do not mix MSVC and MinGW. The existing release job uses the MSYS2 UCRT64 Qt
 packages. CMake rejects Qt versions outside the requested 6.12 series.
 

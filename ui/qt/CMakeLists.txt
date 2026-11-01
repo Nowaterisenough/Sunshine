@@ -4,7 +4,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     enable_testing()
 endif()
 
-find_package(Qt6 6.12 REQUIRED COMPONENTS Core Gui Network Widgets Quick QuickControls2)
+find_package(Qt6 6.12 REQUIRED COMPONENTS Core Gui Network Widgets Quick QuickControls2 Svg)
 if(NOT Qt6_VERSION VERSION_LESS 6.13)
     message(FATAL_ERROR "The native panel targets Qt 6.12.x. Select a Qt 6.12 kit.")
 endif()
@@ -46,7 +46,7 @@ if(WIN32)
 endif()
 
 qt_add_executable(sunshine-gui WIN32 MACOSX_BUNDLE src/main.cpp)
-target_link_libraries(sunshine-gui PRIVATE sunshine_panel_client sunshine_panel_updates Qt6::Quick Qt6::QuickControls2 Qt6::Widgets)
+target_link_libraries(sunshine-gui PRIVATE sunshine_panel_client sunshine_panel_updates Qt6::Quick Qt6::QuickControls2 Qt6::Widgets Qt6::Svg)
 set_target_properties(sunshine-gui PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "Sunshine"
     MACOSX_BUNDLE_GUI_IDENTIFIER "org.sunshine-stream.panel"

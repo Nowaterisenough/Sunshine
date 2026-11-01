@@ -12,12 +12,14 @@
 #include <QLocalSocket>
 #include <QLockFile>
 #include <QMenu>
+#include <QPainter>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QSslSocket>
+#include <QSvgRenderer>
 #include <QSystemTrayIcon>
 #include <QTemporaryDir>
 
@@ -116,7 +118,11 @@ int main(int argc, char *argv[]) {
         const auto dimensions = parser.value("size").split('x');
         if (dimensions.size() == 2) window->resize(qMax(720, dimensions[0].toInt()), qMax(480, dimensions[1].toInt()));
     }
-    app.setWindowIcon(QIcon(":/qt/qml/Sunshine/Panel/assets/sunshine.svg"));
+    QPixmap icon(64, 64);
+    icon.fill(Qt::transparent);
+    QSvgRenderer iconRenderer(QStringLiteral(":/qt/qml/Sunshine/Panel/assets/sunshine.svg"));
+    { QPainter painter(&icon); iconRenderer.render(&painter); }
+    app.setWindowIcon(QIcon(icon));
     app.setQuitOnLastWindowClosed(!trayAvailable);
 
     auto showWindow = [window] { window->show(); window->raise(); window->requestActivate(); };

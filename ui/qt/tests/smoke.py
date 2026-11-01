@@ -93,7 +93,7 @@ def main():
                 diagnostic = result.stdout + result.stderr
                 output.with_suffix(".log").write_text(diagnostic, encoding="utf-8")
                 if result.returncode or not output.exists() or any(word in diagnostic for word in
-                    ["ReferenceError", "TypeError", "Binding loop", "Unable to assign", "failed to load", "is not a type", "Cannot assign"]):
+                    ["ReferenceError", "TypeError", "Binding loop", "Unable to assign", "failed to load", "is not a type", "Cannot assign", "Error decoding", "Cannot open"]):
                     raise RuntimeError(f"Page {name} failed ({result.returncode}):\n{diagnostic}")
                 if "/api/config" not in server.paths[request_start:]:
                     raise RuntimeError(f"Page {name} could not reach the HTTPS fixture:\n{diagnostic}")
