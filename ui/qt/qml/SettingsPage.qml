@@ -68,7 +68,7 @@ ColumnLayout {
         choices.push({text: qsTr("软件编码"), value: "software"})
         return choices
     }
-    Text { visible: !host.connected; text: qsTr("连接主机后即可编辑设置。"); color: Theme.muted; Layout.bottomMargin: 12 }
+    PanelText { visible: !host.connected; text: qsTr("连接主机后即可编辑设置。"); color: Theme.muted; Layout.bottomMargin: 12 }
     SettingGroup {
         visible: page.displayedOptions.length > 0
     Repeater {
@@ -123,10 +123,10 @@ ColumnLayout {
         }
     }
     }
-    Text { visible: page.displayedOptions.length === 0; text: qsTr("没有匹配的设置"); color: Theme.muted; font.pixelSize: 13; Layout.topMargin: 20 }
+    PanelText { visible: page.displayedOptions.length === 0; text: qsTr("没有匹配的设置"); color: Theme.muted; font.pixelSize: 13; Layout.topMargin: 20 }
     RowLayout {
         Layout.fillWidth: true; Layout.topMargin: 20; spacing: 10
-        Text { text: !page.inputsValid ? qsTr("请修正标红的数值") : host.dirty ? qsTr("有未保存的更改") : qsTr("设置与主机同步"); color: !page.inputsValid ? Theme.danger : host.dirty ? Theme.accent : Theme.muted; Layout.fillWidth: true; font.pixelSize: 12 }
+        PanelText { text: !page.inputsValid ? qsTr("请修正标红的数值") : host.dirty ? qsTr("有未保存的更改") : qsTr("设置与主机同步"); color: !page.inputsValid ? Theme.danger : host.dirty ? Theme.accent : Theme.muted; Layout.fillWidth: true; font.pixelSize: 12 }
         PanelButton { text: qsTr("放弃更改"); subtle: true; enabled: host.dirty && !host.busy; onClicked: host.discardChanges() }
         PanelButton { text: qsTr("保存设置"); primary: true; enabled: page.inputsValid && host.dirty && host.connected && !host.busy; onClicked: host.saveConfig() }
     }

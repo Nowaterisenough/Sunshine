@@ -3,10 +3,13 @@ import QtQuick
 
 QtObject {
     property bool dark: true
+    readonly property string fontFamily: Qt.application.font.family
+    readonly property bool windows: Qt.platform.os === "windows"
+    readonly property int windowRadius: windows ? 8 : 14
     readonly property int pagePadding: 18
     readonly property int bodySize: 14
     readonly property int captionSize: 13
-    readonly property int cardHeight: 66
+    readonly property int cardHeight: windows ? 54 : 66
     readonly property int cardSpacing: 12
     readonly property int groupSpacing: 24
     readonly property int controlHeight: 28
@@ -19,7 +22,7 @@ QtObject {
     readonly property color controlBorder: dark ? "#37373d" : "#dcdce2"
     readonly property color text: dark ? "#ededf1" : "#26262c"
     readonly property color muted: dark ? "#919199" : "#76767f"
-    readonly property color secondary: dark ? "#b7b7c0" : "#60606b"
+    readonly property color secondary: dark ? "#a3a3ac" : "#60606b"
     readonly property color accent: dark ? "#aab6fa" : "#5969af"
     readonly property color accentFill: dark ? "#2b2d47" : "#e2e5f6"
     readonly property color accentText: accent

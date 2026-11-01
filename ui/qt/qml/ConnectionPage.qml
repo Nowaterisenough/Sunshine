@@ -16,7 +16,7 @@ ColumnLayout {
         }
         SettingCard {
             grouped: true; title: qsTr("连接状态"); description: "https://127.0.0.1:" + host.port
-            Text { text: host.connected ? qsTr("● 已连接") : host.setupRequired ? qsTr("需要初始化") : qsTr("未连接"); color: host.connected ? Theme.success : Theme.muted; font.pixelSize: 13 }
+            PanelText { text: host.connected ? qsTr("● 已连接") : host.setupRequired ? qsTr("需要初始化") : qsTr("未连接"); color: host.connected ? Theme.success : Theme.muted; font.pixelSize: 13 }
         }
         SettingCard {
             grouped: true; title: qsTr("Sunshine 内核程序"); description: host.executable || qsTr("自动查找安装目录中的可执行文件")

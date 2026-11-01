@@ -6,9 +6,10 @@ Rectangle {
     property string title
     property string description
     property string symbol: ""
+    property bool prominent: false
     property bool grouped: false
     property bool last: false
-    property color descriptionColor: Theme.secondary
+    property color descriptionColor: Theme.muted
     property int minimumHeight: Theme.cardHeight
     readonly property bool wrapped: width < 530 && actions.implicitWidth > 230
     default property alias controls: actions.data
@@ -22,18 +23,18 @@ Rectangle {
         id: iconBox
         visible: card.symbol !== ""
         x: 14; y: card.wrapped ? 15 : (card.height - height) / 2
-        width: 28; height: 28; radius: 7
-        color: Theme.control
-        LineIcon { anchors.centerIn: parent; name: card.symbol; width: 18; height: 18; ink: Theme.secondary }
+        width: 28; height: 28
+        color: "transparent"
+        LineIcon { anchors.centerIn: parent; name: card.symbol; width: 23; height: 23; ink: Theme.secondary }
     }
     Column {
         id: words
         x: iconBox.visible ? 52 : 14
         y: card.wrapped ? 14 : (card.height - height) / 2
         width: Math.max(60, card.width - x - 14 - (card.wrapped || actions.implicitWidth === 0 ? 0 : actions.implicitWidth + 24))
-        spacing: 4
-        Text { text: card.title; color: Theme.text; font.pixelSize: Theme.bodySize; width: parent.width; wrapMode: Text.Wrap }
-        Text { visible: text !== ""; text: card.description; color: card.descriptionColor; font.pixelSize: Theme.captionSize; width: parent.width; wrapMode: Text.Wrap }
+        spacing: 3
+        PanelText { text: card.title; color: Theme.text; font.pixelSize: Theme.bodySize; font.weight: card.prominent ? Font.DemiBold : Font.Normal; width: parent.width; wrapMode: Text.Wrap }
+        PanelText { visible: text !== ""; text: card.description; color: card.descriptionColor; font.pixelSize: Theme.captionSize; width: parent.width; wrapMode: Text.Wrap }
     }
     RowLayout {
         id: actions

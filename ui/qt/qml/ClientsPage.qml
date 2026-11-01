@@ -8,7 +8,7 @@ ColumnLayout {
     property string selectedUuid: ""
     property bool removing: false
     spacing: Theme.cardSpacing
-    Text { text: qsTr("在 Moonlight 中添加这台主机，输入客户端显示的 PIN 完成配对。"); color: Theme.secondary; font.pixelSize: 13; Layout.fillWidth: true; wrapMode: Text.Wrap }
+    PanelText { text: qsTr("在 Moonlight 中添加这台主机，输入客户端显示的 PIN 完成配对。"); color: Theme.secondary; font.pixelSize: 13; Layout.fillWidth: true; wrapMode: Text.Wrap }
     SettingGroup {
         SettingCard {
             grouped: true; last: true; title: qsTr("配对新设备"); description: qsTr("输入设备名称与配对码")
@@ -26,7 +26,7 @@ ColumnLayout {
                 id: row
                 required property var modelData
                 required property int index
-                grouped: true; last: index === host.clients.length - 1; minimumHeight: 62
+                grouped: true; last: index === host.clients.length - 1; minimumHeight: Theme.cardHeight; prominent: true
                 title: modelData.name || qsTr("未命名设备")
                 description: modelData.streaming ? qsTr("● 正在串流") : modelData.enabled === false ? qsTr("● 已停用") : qsTr("● 已配对 · 允许连接")
                 descriptionColor: modelData.streaming ? Theme.success : Theme.muted

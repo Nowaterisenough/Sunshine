@@ -14,7 +14,7 @@ ComboBox {
     palette.base: Theme.card
     palette.window: Theme.card
     palette.highlight: Theme.accent
-    contentItem: Text {
+    contentItem: PanelText {
         text: control.displayText; font: control.font; color: Theme.text
         verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight
     }
@@ -29,7 +29,7 @@ ComboBox {
         width: control.width - 8
         height: 36
         highlighted: control.highlightedIndex === index
-        contentItem: Text {
+        contentItem: PanelText {
             text: control.textRole ? control.model[option.index][control.textRole] : control.model[option.index]
             color: Theme.text; font: control.font; leftPadding: 12; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight
         }

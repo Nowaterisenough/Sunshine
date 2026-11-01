@@ -95,6 +95,14 @@ jobs:
           PANEL_PLATFORM: ${{ matrix.platform }}
         shell: bash
         run: python scripts/package-qt-panel.py --staging staging --output artifacts --platform "$PANEL_PLATFORM" --qt-version "$QT_VERSION" --verify-run
+      - name: Upload rendered pages
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: Qt-panel-screenshots-${{ matrix.platform }}
+          path: build/panel/screenshots/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload Qt packages
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:

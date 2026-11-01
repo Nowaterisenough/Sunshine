@@ -27,7 +27,7 @@ Rectangle {
                 hoverEnabled: true
                 Accessible.name: modelData
                 onClicked: control.activated(index)
-                contentItem: Text { id: caption; text: segment.modelData; color: control.currentIndex === segment.index ? Theme.text : Theme.muted; font.pixelSize: 13; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: PanelText { id: caption; text: segment.modelData; color: control.currentIndex === segment.index ? Theme.text : Theme.muted; font.pixelSize: 13; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 background: Rectangle { radius: 6; color: control.currentIndex === segment.index ? (control.flat ? Theme.control : Theme.card) : segment.hovered ? Theme.hover : "transparent"; border.color: segment.activeFocus ? Theme.accent : "transparent" }
             }
         }

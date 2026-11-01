@@ -31,6 +31,6 @@ ColumnLayout {
             }
         }
     }
-    Text { text: qsTr("显示最近最多 1 MiB 的日志；导出内容为当前读取的日志，不包含 AI 分析。"); color: Theme.muted; font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.Wrap }
+    PanelText { text: qsTr("显示最近最多 1 MiB 的日志；导出内容为当前读取的日志，不包含 AI 分析。"); color: Theme.muted; font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.Wrap }
     FileDialog { id: saveDialog; title: qsTr("导出日志"); fileMode: FileDialog.SaveFile; selectedFile: "file:sunshine.log"; nameFilters: [qsTr("日志文件 (*.log *.txt)")]; onAccepted: host.exportLogs(selectedFile) }
 }

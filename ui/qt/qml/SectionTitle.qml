@@ -10,7 +10,7 @@ RowLayout {
     Layout.topMargin: first ? 0 : 12
     Layout.bottomMargin: 0
     spacing: 8
-    Text { visible: text !== ""; text: section.title; color: Theme.text; font.pixelSize: 14; font.weight: Font.Medium }
-    Text { visible: text !== ""; text: section.description; color: Theme.muted; font.pixelSize: 13; Layout.fillWidth: true; wrapMode: Text.Wrap }
+    PanelText { visible: text !== ""; text: section.title; color: Theme.text; font.pixelSize: 14; font.weight: Font.Medium }
+    PanelText { visible: text !== ""; text: section.description; color: Theme.muted; font.pixelSize: 13; Layout.fillWidth: true; wrapMode: Text.Wrap }
     Item { visible: section.description === ""; Layout.fillWidth: true }
 }

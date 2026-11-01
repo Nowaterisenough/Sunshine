@@ -6,7 +6,7 @@ Rectangle {
     implicitHeight: column.implicitHeight + 2
     Layout.fillWidth: true
     color: Theme.card
-    radius: 14
+    radius: 12
     border.color: Theme.border
     ColumnLayout {
         id: column

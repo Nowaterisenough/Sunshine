@@ -4,6 +4,7 @@
 #include <QCommandLineParser>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QFontDatabase>
 #include <QIcon>
 #include <QJsonDocument>
 #include <QLocalServer>
@@ -25,9 +26,22 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setApplicationName("SunshinePanel");
     QCoreApplication::setApplicationVersion("1.0.0");
     QQuickStyle::setStyle("Basic");
+    // QML Text does not inherit the Controls font; use the same explicit family
+    // for both, including CJK glyphs on Windows installations without Variable UI.
 #ifdef Q_OS_WIN
-    app.setFont(QFont("Segoe UI Variable", 10));
+    const QStringList fontCandidates{"Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI"};
+#elif defined(Q_OS_MACOS)
+    const QStringList fontCandidates{"PingFang SC", "Helvetica Neue"};
+#else
+    const QStringList fontCandidates{"Noto Sans CJK SC", "Noto Sans", "DejaVu Sans"};
 #endif
+    auto panelFont = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+    for (const auto &family : fontCandidates) {
+        if (QFontDatabase::hasFamily(family)) { panelFont = QFont(family); break; }
+    }
+    panelFont.setPixelSize(14);
+    panelFont.setStyleHint(QFont::SansSerif);
+    app.setFont(panelFont);
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Sunshine native control panel (Qt 6.12)");
@@ -58,6 +72,7 @@ int main(int argc, char *argv[]) {
 
     QTemporaryDir testProfile;
     if (parser.isSet("smoke-test")) {
+        qInfo("Panel font: %s", qPrintable(app.font().toString()));
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, testProfile.path());
     }

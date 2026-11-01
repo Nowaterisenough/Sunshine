@@ -27,7 +27,7 @@ set_source_files_properties(qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(sunshine-gui
     URI Sunshine.Panel VERSION 1.0
     QML_FILES
-        qml/Main.qml qml/Theme.qml qml/PanelButton.qml qml/SettingCard.qml
+        qml/Main.qml qml/Theme.qml qml/PanelText.qml qml/PanelButton.qml qml/SettingCard.qml
         qml/WindowChrome.qml qml/PanelDialog.qml qml/DialogActions.qml
         qml/SettingGroup.qml qml/SegmentedControl.qml qml/AppTile.qml qml/SessionsPage.qml
         qml/SectionTitle.qml qml/Field.qml qml/Choice.qml qml/Toggle.qml qml/LineIcon.qml

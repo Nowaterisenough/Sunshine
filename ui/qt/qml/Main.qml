@@ -20,6 +20,7 @@ ApplicationWindow {
     title: "Sunshine"
     flags: Qt.Window | Qt.FramelessWindowHint
     color: "transparent"
+    font.family: Theme.fontFamily
     font.pixelSize: Theme.bodySize
     palette.window: Theme.background
     palette.base: Theme.popup
@@ -35,7 +36,7 @@ ApplicationWindow {
     onPageIndexChanged: { if (scroll.contentItem) scroll.contentItem.contentY = 0 }
     Connections { target: host; function onStateChanged() { if (host.setupRequired) root.pageIndex = 6 } }
 
-    Rectangle { anchors.fill: parent; radius: root.visibility === Window.Maximized ? 0 : 18; color: Theme.background }
+    Rectangle { anchors.fill: parent; radius: root.visibility === Window.Maximized ? 0 : Theme.windowRadius; color: Theme.background }
     WindowChrome {
         id: chrome
         width: parent.width
@@ -47,7 +48,7 @@ ApplicationWindow {
     RowLayout {
         id: settingsBar
         visible: root.settingsVisible
-        x: 18; y: 54; width: root.width - 36; height: 30
+        x: Theme.pagePadding; y: chrome.height + 4; width: root.width - 2 * Theme.pagePadding; height: 30
         spacing: 12
         SegmentedControl {
             flat: true
@@ -68,7 +69,7 @@ ApplicationWindow {
     }
     ScrollView {
         id: scroll
-        x: 0; y: root.settingsVisible ? 92 : 54
+        x: 0; y: root.settingsVisible ? settingsBar.y + settingsBar.height + 8 : chrome.height + 6
         width: root.width; height: root.height - y - 30
         clip: true
         contentWidth: availableWidth
@@ -80,8 +81,8 @@ ApplicationWindow {
             background: Item {}
         }
         Column {
-            x: 18
-            width: scroll.availableWidth - 36
+            x: Theme.pagePadding
+            width: scroll.availableWidth - 2 * Theme.pagePadding
             spacing: host.notice !== "" ? 12 : 0
             Rectangle {
                 visible: host.notice !== ""
@@ -91,7 +92,7 @@ ApplicationWindow {
                 RowLayout {
                     anchors.fill: parent; anchors.margins: 12; spacing: 10
                     Rectangle { width: 6; height: 6; radius: 2; color: host.noticeIsError ? "#e7b554" : Theme.success }
-                    Text { id: noticeLabel; text: host.notice; color: Theme.secondary; font.pixelSize: 13; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                    PanelText { id: noticeLabel; text: host.notice; color: Theme.secondary; font.pixelSize: 13; Layout.fillWidth: true; wrapMode: Text.Wrap }
                     PanelButton { subtle: true; symbol: "close"; Accessible.name: qsTr("关闭提示"); onClicked: host.clearNotice() }
                 }
             }
@@ -107,7 +108,7 @@ ApplicationWindow {
     }
     Rectangle {
         z: 9; anchors.fill: parent
-        radius: root.visibility === Window.Maximized ? 0 : 18
+        radius: root.visibility === Window.Maximized ? 0 : Theme.windowRadius
         color: "transparent"; border.color: Theme.dark ? "#404047" : "#c7c7ce"
         visible: root.visibility !== Window.Maximized
     }
@@ -172,14 +173,14 @@ ApplicationWindow {
         ColumnLayout {
             spacing: 12
             SettingGroup {
-                SettingCard { grouped: true; title: qsTr("版本"); description: qsTr("Sunshine 控制面板"); Text { text: "1.0.0"; color: Theme.secondary; font.pixelSize: 13 } }
-                SettingCard { grouped: true; title: qsTr("主机版本"); description: qsTr("当前连接的 Sunshine 主机"); Text { text: host.config.version || qsTr("未连接"); color: Theme.muted; font.pixelSize: 13 } }
-                SettingCard { grouped: true; title: qsTr("界面框架"); description: qsTr("原生桌面界面"); Text { text: "Qt 6.12"; color: Theme.secondary; font.pixelSize: 13 } }
+                SettingCard { grouped: true; title: qsTr("版本"); description: qsTr("Sunshine 控制面板"); PanelText { text: "1.0.0"; color: Theme.secondary; font.pixelSize: 13 } }
+                SettingCard { grouped: true; title: qsTr("主机版本"); description: qsTr("当前连接的 Sunshine 主机"); PanelText { text: host.config.version || qsTr("未连接"); color: Theme.muted; font.pixelSize: 13 } }
+                SettingCard { grouped: true; title: qsTr("界面框架"); description: qsTr("原生桌面界面"); PanelText { text: "Qt 6.12"; color: Theme.secondary; font.pixelSize: 13 } }
                 SettingCard {
                     grouped: true; title: qsTr("应用主题"); description: qsTr("选择控制面板的外观")
                     SegmentedControl { model: [qsTr("浅色"), qsTr("深色")]; currentIndex: Theme.dark ? 1 : 0; onActivated: function(index) { preferences.magpieDarkTheme = index === 1; Theme.dark = preferences.magpieDarkTheme } }
                 }
-                SettingCard { grouped: true; last: true; title: qsTr("开源许可"); description: qsTr("Sunshine 的采集、编码和串流内核保持独立"); Text { text: "GPL-3.0"; color: Theme.muted; font.pixelSize: 13 } }
+                SettingCard { grouped: true; last: true; title: qsTr("开源许可"); description: qsTr("Sunshine 的采集、编码和串流内核保持独立"); PanelText { text: "GPL-3.0"; color: Theme.muted; font.pixelSize: 13 } }
             }
         }
     }

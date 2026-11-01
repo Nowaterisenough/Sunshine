@@ -35,9 +35,9 @@ ColumnLayout {
         gradient: Gradient { orientation: Gradient.Horizontal; GradientStop { position: 0; color: Theme.card } GradientStop { position: 1; color: Theme.dark ? "#30313c" : "#e9eaf3" } }
         Column {
             x: 20; y: 20; width: parent.width - 210; spacing: 8
-            Text { text: qsTr("把游戏与桌面带到每一块屏幕"); color: Theme.text; font.pixelSize: 15; font.weight: Font.DemiBold; width: parent.width; wrapMode: Text.Wrap }
-            Text { text: qsTr("应用会显示在已配对的 Moonlight 客户端中。配置启动命令、工作目录，或添加一个桌面入口，即可从其他设备开始串流。"); color: Theme.secondary; font.pixelSize: 13; width: parent.width; wrapMode: Text.Wrap; lineHeight: 1.5 }
-            Text { text: qsTr("编辑应用时，现有准备命令与高级参数会保留。"); color: Theme.muted; font.pixelSize: 12; width: parent.width; wrapMode: Text.Wrap }
+            PanelText { text: qsTr("把游戏与桌面带到每一块屏幕"); color: Theme.text; font.pixelSize: 15; font.weight: Font.DemiBold; width: parent.width; wrapMode: Text.Wrap }
+            PanelText { text: qsTr("应用会显示在已配对的 Moonlight 客户端中。配置启动命令、工作目录，或添加一个桌面入口，即可从其他设备开始串流。"); color: Theme.secondary; font.pixelSize: 13; width: parent.width; wrapMode: Text.Wrap; lineHeight: 1.5 }
+            PanelText { text: qsTr("编辑应用时，现有准备命令与高级参数会保留。"); color: Theme.muted; font.pixelSize: 12; width: parent.width; wrapMode: Text.Wrap }
         }
         Repeater {
             model: ["clients", "gamepad", "apps"]

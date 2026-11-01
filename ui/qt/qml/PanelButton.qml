@@ -22,7 +22,7 @@ Button {
             anchors.centerIn: parent
             spacing: control.text !== "" && control.symbol !== "" ? 6 : 0
             LineIcon { visible: control.symbol !== ""; name: control.symbol; width: 15; height: 15; anchors.verticalCenter: parent.verticalCenter; ink: control.primary ? Theme.accent : Theme.muted }
-            Text { text: control.text; font: control.font; color: control.primary ? Theme.accent : control.destructive ? Theme.danger : control.subtle ? Theme.muted : Theme.text }
+            PanelText { text: control.text; font: control.font; color: control.primary ? Theme.accent : control.destructive ? Theme.danger : control.subtle ? Theme.muted : Theme.text }
         }
     }
     background: Rectangle {

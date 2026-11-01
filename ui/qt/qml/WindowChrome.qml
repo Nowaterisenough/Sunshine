@@ -6,10 +6,10 @@ Item {
     required property var window
     property int currentPage: 0
     readonly property bool macControls: Qt.platform.os === "osx"
-    readonly property bool compact: width < 900
+    readonly property int navigationY: macControls ? 10 : 40
     signal navigate(int page)
     signal refresh()
-    height: 50
+    height: macControls ? 48 : 78
     MouseArea {
         property point dragOrigin
         property point startPosition
@@ -39,29 +39,32 @@ Item {
                 width: 14; height: 14
                 hoverEnabled: true
                 Accessible.name: modelData === "close" ? qsTr("关闭") : modelData === "minimize" ? qsTr("最小化") : qsTr("最大化或还原")
-                background: Rectangle { radius: 7; color: traffic.modelData === "close" ? "#ff6057" : traffic.modelData === "minimize" ? "#ffbd2e" : "#28c840"; border.color: "#30ffffff" }
+                background: Rectangle { radius: 7; color: traffic.modelData === "close" ? "#ff6057" : traffic.modelData === "minimize" ? "#ffbd2e" : "#28c840" }
                 contentItem: Item { LineIcon { visible: traffic.hovered; anchors.centerIn: parent; width: 8; height: 8; name: traffic.modelData; ink: "#a0000000" } }
                 onClicked: chrome.captionAction(modelData)
             }
         }
     }
+    Row {
+        x: chrome.macControls ? 134 : 10
+        y: chrome.macControls ? 16 : 8
+        spacing: 6
+        Image { source: "../assets/sunshine-mark.svg"; width: 16; height: 16; anchors.verticalCenter: parent.verticalCenter }
+        PanelText { text: "sunshine"; color: Theme.text; font.pixelSize: chrome.macControls ? 14 : 12; font.weight: chrome.macControls ? Font.DemiBold : Font.Normal; height: 18; verticalAlignment: Text.AlignVCenter }
+    }
     PanelButton {
-        visible: chrome.macControls && !chrome.compact
-        x: 100; y: 12; implicitWidth: 22; subtle: true; symbol: "panel"
+        x: chrome.macControls ? 96 : 16; y: chrome.navigationY
+        implicitWidth: 28; subtle: true; symbol: "panel"
         Accessible.name: qsTr("连接设置")
         ToolTip.visible: hovered; ToolTip.text: qsTr("连接设置")
         onClicked: chrome.navigate(6)
     }
-    Row {
-        x: chrome.macControls ? (chrome.compact ? 100 : 134) : 20
-        y: 16
-        spacing: 9
-        LineIcon { name: "sun"; width: 18; height: 18; ink: Theme.text }
-        Text { text: "sunshine"; color: Theme.text; font.pixelSize: 15; font.weight: Font.DemiBold; height: 18; verticalAlignment: Text.AlignVCenter }
-    }
     Flickable {
-        x: chrome.macControls ? (chrome.compact ? 212 : 242) : 156
-        y: 11; width: chrome.width - x - (chrome.macControls ? 78 : 176); height: 30
+        readonly property real leftLimit: chrome.macControls ? 238 : 56
+        readonly property real rightLimit: chrome.width - 84
+        x: chrome.macControls ? leftLimit : Math.max(leftLimit, (chrome.width - contentWidth) / 2)
+        y: chrome.navigationY
+        width: Math.min(contentWidth, rightLimit - x); height: 28
         contentWidth: navigation.width; clip: true
         flickableDirection: Flickable.HorizontalFlick
         Row {
@@ -72,28 +75,37 @@ Item {
                 delegate: AbstractButton {
                     id: nav
                     required property var modelData
-                    width: caption.implicitWidth + 26; height: 28
+                    width: caption.implicitWidth + 24; height: 26
                     hoverEnabled: true
                     Accessible.name: modelData.label
                     onClicked: chrome.navigate(modelData.page)
-                    contentItem: Text { id: caption; text: nav.modelData.label; color: chrome.currentPage === nav.modelData.page ? Theme.text : Theme.muted; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    contentItem: PanelText { id: caption; text: nav.modelData.label; color: chrome.currentPage === nav.modelData.page ? Theme.text : Theme.muted; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     background: Rectangle { radius: 6; color: chrome.currentPage === nav.modelData.page ? Theme.selected : nav.hovered ? Theme.hover : "transparent"; border.color: nav.activeFocus ? Theme.accent : "transparent" }
                 }
             }
         }
     }
     Row {
-        anchors.right: parent.right; anchors.rightMargin: chrome.macControls ? 10 : 108
-        y: 11; spacing: 4
+        anchors.right: parent.right; anchors.rightMargin: 10
+        y: chrome.navigationY; spacing: 4
         PanelButton { subtle: true; symbol: "refresh"; Accessible.name: qsTr("刷新"); ToolTip.visible: hovered; ToolTip.text: qsTr("刷新"); onClicked: chrome.refresh() }
         PanelButton { subtle: ![3,5,6].includes(chrome.currentPage); symbol: "connection"; implicitWidth: 28; Accessible.name: qsTr("设置"); ToolTip.visible: hovered; ToolTip.text: qsTr("设置"); onClicked: chrome.navigate(3) }
     }
     Row {
         visible: !chrome.macControls
-        anchors.right: parent.right; anchors.rightMargin: 8; y: 11
+        anchors.right: parent.right; anchors.rightMargin: 2; y: 2
         Repeater {
             model: ["minimize", "maximize", "close"]
-            delegate: PanelButton { required property string modelData; subtle: true; symbol: modelData; implicitWidth: 30; onClicked: chrome.captionAction(modelData) }
+            delegate: AbstractButton {
+                id: captionButton
+                required property string modelData
+                width: 46; height: 28
+                hoverEnabled: true
+                Accessible.name: modelData === "close" ? qsTr("关闭") : modelData === "minimize" ? qsTr("最小化") : qsTr("最大化或还原")
+                background: Rectangle { radius: 4; color: captionButton.hovered ? (captionButton.modelData === "close" ? "#c42b1c" : Theme.hover) : "transparent" }
+                contentItem: Item { LineIcon { anchors.centerIn: parent; width: 13; height: 13; name: captionButton.modelData === "maximize" && chrome.window.visibility === Window.Maximized ? "restore" : captionButton.modelData; ink: Theme.secondary } }
+                onClicked: chrome.captionAction(modelData)
+            }
         }
     }
     function captionAction(action) {
