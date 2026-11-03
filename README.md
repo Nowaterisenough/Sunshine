@@ -2,6 +2,118 @@
 
 > **Qt 6.12 原生界面版本：** 以 AI 应用 Magpie 的深色顶部导航风格重写本地控制面板，保留串流内核，默认不构建 AI 代理、旧 Tauri 界面与网页前端。默认发行包使用 `cmake --preset release`、`cmake --build --preset release` 和 `cpack --preset release`。仅构建界面使用 `qt-ui`。参见 [Qt 界面构建与验证说明](ui/qt/README.md)。
 
+## Qt 分支同步上游（长期维护流程）
+
+本 fork 的 Qt 开发分支是 **`codex/qt-actions`**，上游是
+[`AlkaidLab/foundation-sunshine` 的 `master`](https://github.com/AlkaidLab/foundation-sunshine/tree/master)。
+同步路径固定为 **`upstream/master` → 合并到 `codex/qt-actions` → `origin/codex/qt-actions`**。
+这里的 fork sync 是保留分支历史的合并：保留上游串流内核、协议、驱动与接口更新，同时继续使用本仓库 `ui/qt/` 的原生界面。
+`master` 和 `src_assets/common/sunshine-control-panel` 不是本 fork 的 Qt 界面开发入口。
+
+界面参考是 **Magpie AI 应用的顶部导航布局**：顶部主导航，下一行分类标签与右侧搜索，连续设置行。
+保持 Sunshine 自身功能与品牌；不把它改成侧栏，也不重新接回网页／Tauri 容器。
+上游的 WebUI／Tauri 源码和子模块引用可以随合并保留，Qt 发行包不会构建或携带它们。
+以下上游通用说明用于串流内核参考；本 fork 的界面、安装包和本地构建以 [Qt 说明](ui/qt/README.md) 为准。
+
+### 1. 准备与检查
+
+先确认工作区、暂存区及已初始化的子模块均无未保存改动。有改动时先单独保存，不能用 reset、clean 或强制同步清空。
+下列命令按 Bash／Git Bash／MSYS2 编写：
+
+```bash
+git status --short --branch
+git submodule foreach 'git status --short'
+git remote -v
+# 仅第一次、尚不存在 upstream 时添加：
+# git remote add upstream https://github.com/AlkaidLab/foundation-sunshine.git
+
+git -c fetch.recurseSubmodules=false fetch --no-tags origin codex/qt-actions
+# 首次没有本地分支时：git switch --track -c codex/qt-actions origin/codex/qt-actions
+git switch codex/qt-actions
+git merge --ff-only origin/codex/qt-actions
+git -c fetch.recurseSubmodules=false fetch --no-tags upstream master
+git log --oneline HEAD..upstream/master
+```
+
+使用定向 fetch，避免抓取所有历史开发分支时自动递归访问已失效的旧 GUI 子模块提交。
+如果最后一条没有输出，上游已全部包含，无需再创建空合并。
+
+### 2. 建立回退点并合并
+
+```bash
+git branch "codex/qt-before-sync-$(date +%Y%m%d-%H%M%S)" HEAD
+git merge --no-commit --no-ff upstream/master
+```
+
+PowerShell 的备份命令可改为：`git branch ("codex/qt-before-sync-" + (Get-Date -Format yyyyMMdd-HHmmss)) HEAD`。
+发生冲突时逐个文件合并，解决后用 `git add -- 文件路径` 标记；不能对整个仓库执行 `--ours`／`--theirs`，也不能对 Qt 分支运行带 `--force` 的 `gh repo sync` 或 force-push。
+
+必须检查的 Qt 约束：
+
+- `ui/qt/`、本 fork 品牌资源和 `.github/workflows/qt-panel.yml` 保留。
+- `BUILD_QT_UI=ON`；Qt 开启时 `BUILD_WEB_UI` 强制为 `OFF`；`SUNSHINE_ENABLE_AI=OFF`。
+- `CMakePresets.json` 的 `release`／`qt-host` 构建主机加 Qt；`qt-ui` 只构建 Qt。找不到 Qt 必须报错，不能回退下载旧 GUI。
+- `cmake/packaging/common.cmake`、`ui_install_rules.cmake`、Inno 安装规则仍安装 Qt 可执行文件与运行库，并排除旧 WebView2／WebUI 文件。
+- 上游更改 HTTP 接口、配置字段、客户端属性时，核对 Qt 客户端和相应契约测试。不要只检查界面文件是否存在。
+- 工作流冲突同时保留 Qt 构建／发布规则和上游修复。例：2026-11-03 保留 Qt 分支 Inno Setup 6.7.4 固定哈希，并补入上游的发布者签名检查，未退回 6.7.3 或重复安装。
+
+```bash
+git diff --name-only --diff-filter=U
+git diff --cached --check
+git diff HEAD -- ui/qt CMakeLists.txt CMakePresets.json cmake .github/workflows
+```
+
+第一条必须没有未解决文件。只构建 Qt 面板不需要初始化串流内核或旧 GUI 的子模块；构建完整主机时，再按合并后的 `.gitmodules` 更新所需子模块：
+
+```bash
+git submodule sync --recursive
+git submodule update --init --recursive
+```
+
+### 3. 验证
+
+使用机器上已安装、ABI 匹配的 Qt 6.12.x kit；路径发现与平台要求见 [Qt 构建说明](ui/qt/README.md)。
+
+```bash
+cmake --preset qt-ui
+cmake --build --preset qt-ui --parallel
+ctest --preset qt-ui
+python3 -m unittest discover -s tests/tools -p test_qt_release.py
+python3 -m unittest discover -s tests/tools -p test_installer_upgrade.py
+python3 tests/tools/test_cmake_configuration.py --source . --cmake cmake --compiler c++
+```
+
+最后一条的编译器应使用当前 kit 的编译器（MSVC 开发环境使用 `cl`）。若安装了 `actionlint`，检查本次修改的工作流。
+运行 `ui/qt/tests/smoke.py`，使用实际编译出的可执行文件路径；它启动隔离的本地 HTTPS 测试主机，验证所有页面、设置分类、两种主题、紧凑窗口及自动配对弹窗，并生成真实 Qt 截图。
+
+```bash
+# macOS 示例；Windows 使用 build/qt/ui/qt/sunshine-gui.exe，必要时包含配置子目录。
+python3 ui/qt/tests/smoke.py \
+  --binary build/qt/ui/qt/sunshine-gui.app/Contents/MacOS/sunshine-gui \
+  --output build/qt-sync-screenshots
+```
+
+后端改动还需按 [开发说明](docs/zh-CN/development.md) 在 Windows 验证完整主机；macOS 面板测试不能替代驱动、编码、HDR 与 Moonlight 实际串流验证。
+
+### 4. 保存、推送与发布
+
+审查合并结果后提交同步，Qt 界面修正和文档更新另作独立提交：
+
+```bash
+git commit   # 已解决并暂存的上游合并；在消息中记录 upstream/master 的 SHA
+git merge-base --is-ancestor upstream/master HEAD
+git status --short --branch
+git push origin HEAD:codex/qt-actions
+```
+
+不改写已发布的 Qt 历史。推送 Qt 界面改动会触发 **Build Qt Packages**，检查 Windows 和 macOS 构建、契约测试、部署包与截图。
+只有后端更新、未命中该工作流路径过滤时，手动运行：`gh workflow run qt-panel.yml --ref codex/qt-actions`。
+**Build and Release** 的手动运行及 `publish_existing` 会进入发布流程，不能当作只读验证命令；需要发布时再按 [Qt Actions 说明](docs/qt-actions.md) 执行。
+
+| 同步日期 | 上游基线 | Qt 合并提交 |
+| --- | --- | --- |
+| 2026-11-03 | `997ef450`（从 `bcbb5ec7` 新增 9 个提交） | `dc44bf08` |
+
 <div align="center">
 
 <picture>
