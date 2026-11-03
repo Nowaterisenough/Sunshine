@@ -108,6 +108,7 @@ git push origin HEAD:codex/qt-actions
 ```
 
 不改写已发布的 Qt 历史。推送 Qt 界面改动会触发 **Build Qt Packages**，检查 Windows 和 macOS 构建、契约测试、部署包与截图。
+macOS 只发布 arm64；默认使用 Intel runner 交叉编译并运行临时本机测试，原生 ARM64 验收步骤见 [Qt Actions 说明](docs/qt-actions.md#macos-runner-与-arm64-验证)。
 只有后端更新、未命中该工作流路径过滤时，手动运行：`gh workflow run qt-panel.yml --ref codex/qt-actions`。
 **Build and Release** 的手动运行及 `publish_existing` 会进入发布流程，不能当作只读验证命令；需要发布时再按 [Qt Actions 说明](docs/qt-actions.md) 执行。
 

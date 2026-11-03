@@ -7,8 +7,8 @@
 工作流：`Build Qt Packages`（`.github/workflows/qt-panel.yml`）。
 
 - Windows Server 2022 runner：MSVC 2022 x64，Qt 6.12.0 的 `win64_msvc2022_64` kit。
-- macOS 26 ARM64 runner（`macos-26`）：AppleClang，Qt 6.12.0 的 `clang_64` kit，主程序仅编译 arm64。运行前检查 runner 架构；不会生成 Intel 或通用版主程序。
-- 自动执行配置、编译、接口测试、Qt 运行库部署、真实页面 HTTPS 测试、压缩、解压验证和程序启动检查。
+- macOS 默认使用 `macos-15-intel` runner 交叉编译，Qt 6.12.0 的 `clang_64` kit，发行主程序仅编译 arm64。构建机器和产物架构分别记录；不会发布 Intel 或通用版主程序。
+- 自动执行配置、编译、接口测试、Qt 运行库部署、真实页面 HTTPS 测试、压缩及解压验证。跨架构时，接口／页面测试运行在同一提交的临时本机构建上；发行包单独进行 ARM64 架构检查。原生 runner 还会启动解压后的发行程序。
 - 不依赖主机的第三方子模块、驱动 SDK、发布令牌或上游仓库合并设置。
 - `contents: read` 权限，构建产物保留 30 天；失败时上传 CMake/测试诊断、页面截图和进程日志。
 
@@ -25,13 +25,25 @@ macOS 包校验会拒绝 x86_64 或通用版主程序，并检查包内每个 Ma
 
 **这些 ZIP 是控制面板及其运行库，需要已有的本机 Sunshine 内核。** Windows 启动 `assets/gui/sunshine-gui.exe`，macOS 打开 `sunshine-gui.app`。它们是开发构建，未经过正式发布签名/公证。
 
-### macOS runner 未分配时
+### macOS runner 与 ARM64 验证
 
 如果任务没有执行任何步骤，并报告 `The job was not acquired by Runner of type hosted`
 或 ARM64 capacity constraints，这是 GitHub runner 分配失败；增加 job 的构建超时不会延长分配期限。
-2026-11-03 将 `macos-15` 改为 `macos-26` ARM64 池，保持 arm64 构建、原生契约测试和截图验证。
-不要通过跳过 macOS、改成 `continue-on-error` 或发布 Intel 包让流水线变绿。
-若 GitHub 整体 ARM64 容量仍不足，可在服务恢复后重跑失败任务；任何新的 runner 调整都需保持原生 ARM64 验证。
+2026-11-03 的 `macos-15` 分配失败，切换到 `macos-26` 后仍排队，因此默认采用 Intel 池交叉编译 ARM64 产品。
+
+- `build/panel` / `staging` 始终是 **arm64 产品**，只有它进入 `artifacts`。
+- Intel runner 上额外使用 `build/panel-native` / `validation` 编译同一源码的 x86_64 测试程序，执行契约测试、实际页面与配对弹窗测试。这个临时测试程序不会打包、上传或发布。
+- 包校验要求主程序架构严格为 arm64，并检查 Qt 框架／插件的 arm64 支持。它不会把在 Intel 上检查文件误报成已在 ARM64 上执行。
+- ARM64 容量恢复后，可通过手动输入 `macos_runner=macos-26` 使用原生 ARM64 runner；此时契约测试、页面测试、解压启动验证直接作用于 ARM64 构建，无需临时测试程序。`workflow_call` 同样支持该参数。
+
+```bash
+gh workflow run qt-panel.yml --ref codex/qt-actions -f macos_runner=macos-26
+```
+
+默认交叉构建的原生 Apple Silicon 验收：下载 CI 的 `macos-arm64` ZIP 后，在 ARM64 Mac 上解压，运行
+`ui/qt/tests/smoke.py --binary <解压后的 .app/Contents/MacOS/sunshine-gui> --output build/qt-arm64-validation`。
+这会实际运行同一个发行目标文件，验证页面、HTTPS 与配对流程。正式发布前应完成这项验收或原生 ARM64 CI。
+不要通过跳过 macOS、`continue-on-error` 或把 Intel 程序标记为 ARM64 来通过流水线。
 
 ## 完整 Windows 主机安装包
 

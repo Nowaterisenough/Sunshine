@@ -2,7 +2,19 @@ name: Build Qt Packages
 
 on:
   workflow_call:
+    inputs:
+      macos_runner:
+        type: string
+        default: macos-15-intel
   workflow_dispatch:
+    inputs:
+      macos_runner:
+        description: 'Build host only; the shipped macOS executable is always arm64'
+        type: choice
+        default: macos-15-intel
+        options:
+          - macos-15-intel
+          - macos-26
   pull_request:
     paths:
       - 'ui/qt/**'
@@ -53,9 +65,9 @@ jobs:
             platform: windows-x64
             qt-host: windows
             qt-arch: win64_msvc2022_64
-          # macos-15 failed before runner allocation during ARM64 capacity
-          # shortages. Keep native Apple Silicon builds on the macOS 26 pool.
-          - os: macos-26
+          # Cross-build the ARM64 product on Intel while the hosted ARM pool
+          # is capacity constrained. A native test companion is never shipped.
+          - os: ${{ inputs.macos_runner || 'macos-15-intel' }}
             platform: macos-arm64
             qt-host: mac
             qt-arch: clang_64
@@ -65,13 +77,24 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Verify Apple Silicon runner
+      - name: Select macOS verification build
+        id: macos
         if: runner.os == 'macOS'
         shell: bash
         run: |
           actual_arch=$(uname -m)
           echo "macOS build host: $actual_arch"
-          test "$actual_arch" = arm64
+          case "$actual_arch" in
+            arm64) test_build=build/panel; test_staging=staging; target_tests=ON ;;
+            x86_64) test_build=build/panel-native; test_staging=validation; target_tests=OFF ;;
+            *) echo "Unsupported macOS build host: $actual_arch"; exit 1 ;;
+          esac
+          {
+            echo "architecture=$actual_arch"
+            echo "test_build=$test_build"
+            echo "test_staging=$test_staging"
+            echo "target_tests=$target_tests"
+          } >> "$GITHUB_OUTPUT"
       - name: Install Qt 6.12
         uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
@@ -89,29 +112,46 @@ jobs:
         run: cmake -S ui/qt -B build/panel -G "Visual Studio 17 2022" -A x64 -DSUNSHINE_QT_TESTS=ON
       - name: Configure macOS panel
         if: runner.os == 'macOS'
-        run: cmake -S ui/qt -B build/panel -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DSUNSHINE_QT_TESTS=ON
+        run: cmake -S ui/qt -B build/panel -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DSUNSHINE_QT_TESTS=${{ steps.macos.outputs.target_tests }}
+      - name: Configure native macOS test companion
+        if: runner.os == 'macOS' && steps.macos.outputs.architecture == 'x86_64'
+        run: cmake -S ui/qt -B build/panel-native -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64 -DSUNSHINE_QT_TESTS=ON
       - name: Build panel
         run: cmake --build build/panel --config Release --parallel 4
+      - name: Build native macOS test companion
+        if: runner.os == 'macOS' && steps.macos.outputs.architecture == 'x86_64'
+        run: cmake --build build/panel-native --config Release --parallel 4
       - name: Test API contracts
-        run: ctest --test-dir build/panel -C Release --output-on-failure
+        run: ctest --test-dir "${{ steps.macos.outputs.test_build || 'build/panel' }}" -C Release --output-on-failure
       - name: Deploy Qt runtime
         run: cmake --install build/panel --config Release --prefix staging
+      - name: Deploy native macOS test companion
+        if: runner.os == 'macOS' && steps.macos.outputs.architecture == 'x86_64'
+        run: cmake --install build/panel-native --config Release --prefix validation
       - name: Verify deployed pages over local HTTPS
         shell: bash
         env:
           QT_QUICK_BACKEND: software
+          MACOS_TEST_STAGING: ${{ steps.macos.outputs.test_staging }}
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             panel_binary=staging/assets/gui/sunshine-gui.exe
           else
-            panel_binary=staging/sunshine-gui.app/Contents/MacOS/sunshine-gui
+            panel_binary="$MACOS_TEST_STAGING/sunshine-gui.app/Contents/MacOS/sunshine-gui"
           fi
           python ui/qt/tests/smoke.py --binary "$panel_binary" --output build/panel/screenshots
       - name: Package panel and verify archive
         env:
           PANEL_PLATFORM: ${{ matrix.platform }}
+          MACOS_BUILD_ARCH: ${{ steps.macos.outputs.architecture }}
         shell: bash
-        run: python scripts/package-qt-panel.py --staging staging --output artifacts --platform "$PANEL_PLATFORM" --qt-version "$QT_VERSION" --verify-run
+        run: |
+          launch_check=(--verify-run)
+          if [[ "$RUNNER_OS" == "macOS" && "$MACOS_BUILD_ARCH" != "arm64" ]]; then
+            launch_check=()
+            echo 'ARM64 product: inspect target runtime; native execution was tested separately on the Intel build host.'
+          fi
+          python scripts/package-qt-panel.py --staging staging --output artifacts --platform "$PANEL_PLATFORM" --qt-version "$QT_VERSION" "${launch_check[@]}"
       - name: Upload rendered pages
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -137,6 +177,9 @@ jobs:
             build/panel/CMakeCache.txt
             build/panel/CMakeFiles/CMakeConfigureLog.yaml
             build/panel/Testing/Temporary/
+            build/panel-native/CMakeCache.txt
+            build/panel-native/CMakeFiles/CMakeConfigureLog.yaml
+            build/panel-native/Testing/Temporary/
             build/panel/screenshots/
           if-no-files-found: ignore
           retention-days: 7
@@ -144,10 +187,15 @@ jobs:
         shell: bash
         env:
           PANEL_PLATFORM: ${{ matrix.platform }}
+          MACOS_BUILD_ARCH: ${{ steps.macos.outputs.architecture }}
         run: |
           {
             echo "### Qt $QT_VERSION / $PANEL_PLATFORM"
             echo 'The artifact contains a ZIP, SHA-256 checksums, and build metadata.'
             echo 'This is the standalone Qt control panel with its runtime. It connects to an existing local Sunshine host.'
             echo 'The Build and Release workflow produces the full Windows host installer and portable package.'
+            if [[ "$RUNNER_OS" == "macOS" ]]; then
+              echo "Product executable: arm64 only. Native test/screenshot architecture: $MACOS_BUILD_ARCH."
+              echo 'The Intel test companion is not included in any package. Target launch checks require Apple Silicon.'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
