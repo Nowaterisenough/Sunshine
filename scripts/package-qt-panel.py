@@ -6,10 +6,44 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import tempfile
 import zipfile
+
+
+# Thin/fat Mach-O, both endiannesses and 32/64-bit headers. Read the header
+# instead of checking suffixes: framework binaries do not have an extension.
+MACH_O_HEADERS = {bytes.fromhex(value) for value in (
+    "feedface", "cefaedfe", "feedfacf", "cffaedfe",
+    "cafebabe", "bebafeca", "cafebabf", "bfbafeca",
+)}
+
+
+def binary_architectures(binary: Path) -> set[str]:
+    return set(subprocess.check_output(["lipo", "-archs", str(binary)], text=True).split())
+
+
+def verify_macos_runtime(bundle: Path, executable: Path) -> set[str]:
+    expected = binary_architectures(executable)
+    if expected != {"arm64"}:
+        raise RuntimeError(f"Expected an arm64-only panel, found {sorted(expected)}")
+    checked = {executable.resolve()}
+    for candidate in bundle.rglob("*"):
+        if not candidate.is_file() or candidate.resolve() in checked:
+            continue
+        with candidate.open("rb") as stream:
+            if stream.read(4) not in MACH_O_HEADERS:
+                continue
+        checked.add(candidate.resolve())
+        missing = expected - binary_architectures(candidate)
+        if missing:
+            raise RuntimeError(
+                f"Incomplete macOS runtime: {candidate.relative_to(bundle)} "
+                f"is missing architectures {sorted(missing)}"
+            )
+    return expected
 
 
 def verify_layout(staging: Path, target: str) -> Path:
@@ -31,14 +65,12 @@ def verify_layout(staging: Path, target: str) -> Path:
                     bundle / "Resources/qml/QtQuick/qmldir"]
         required += [bundle / f"Frameworks/Qt{name}.framework/Versions/A/Qt{name}"
                      for name in ("Core", "Gui", "Network", "Qml", "Quick", "Svg")]
-        if executable.is_file():
-            architectures = subprocess.check_output(["lipo", "-archs", str(executable)], text=True).split()
-            if "arm64" not in architectures:
-                raise RuntimeError(f"Expected an arm64 panel, found {architectures}")
 
     missing = [str(path.relative_to(staging)) for path in required if not path.is_file()]
     if missing:
         raise RuntimeError("Incomplete Qt deployment: " + ", ".join(missing))
+    if target == "macos-arm64":
+        verify_macos_runtime(bundle, executable)
     forbidden_names = {"webview2loader.dll", "alkaidlab-plugin-stylus.dll"}
     for path in staging.rglob("*"):
         if path.name.lower() in forbidden_names or path.relative_to(staging).as_posix().startswith("assets/web/"):
@@ -103,6 +135,9 @@ def main():
                     if os.environ.get("GITHUB_REPOSITORY") and os.environ.get("GITHUB_RUN_ID") else None),
         "includes_streaming_host": False,
     }
+    if args.platform == "macos-arm64":
+        metadata["architectures"] = sorted(binary_architectures(executable))
+        metadata["build_architecture"] = platform.machine().lower()
 
     with tempfile.TemporaryDirectory(prefix="qt-package-", dir=output.parent) as temporary:
         temporary = Path(temporary)

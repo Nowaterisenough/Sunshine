@@ -34,6 +34,12 @@ cmake --install build/qt --prefix build/qt-install
 If Qt is not discoverable, provide the installed kit using `CMAKE_PREFIX_PATH`
 or use that kit's `qt-cmake`. No developer-specific Qt path is stored here.
 
+The macOS CI job uses the native ARM64 `macos-26` runner and builds an
+arm64-only executable. Packaging checks the executable architecture and ARM64
+availability in every bundled Mach-O library/plugin; shared Qt libraries may
+be universal. There is no Intel or universal application release variant.
+See [runner allocation troubleshooting](../../docs/qt-actions.md#macos-runner-未分配时).
+
 The panel can also be built without the host's submodules and dependencies:
 
 ```sh

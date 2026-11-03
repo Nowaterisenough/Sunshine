@@ -79,6 +79,7 @@ cmake --preset qt-ui
 cmake --build --preset qt-ui --parallel
 ctest --preset qt-ui
 python3 -m unittest discover -s tests/tools -p test_qt_release.py
+python3 -m unittest discover -s tests/tools -p test_qt_package.py
 python3 -m unittest discover -s tests/tools -p test_installer_upgrade.py
 python3 tests/tools/test_cmake_configuration.py --source . --cmake cmake --compiler c++
 ```

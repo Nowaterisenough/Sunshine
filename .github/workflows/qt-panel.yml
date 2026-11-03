@@ -12,6 +12,7 @@ on:
       - 'CMakePresets.json'
       - 'cmake/prep/ui_options.cmake'
       - 'scripts/package-qt-panel.py'
+      - 'tests/tools/test_qt_package.py'
       - '.github/workflows/qt-panel.yml'
       - 'LICENSE'
   push:
@@ -26,6 +27,7 @@ on:
       - 'CMakePresets.json'
       - 'cmake/prep/ui_options.cmake'
       - 'scripts/package-qt-panel.py'
+      - 'tests/tools/test_qt_package.py'
       - '.github/workflows/qt-panel.yml'
       - 'LICENSE'
 
@@ -51,7 +53,9 @@ jobs:
             platform: windows-x64
             qt-host: windows
             qt-arch: win64_msvc2022_64
-          - os: macos-15
+          # macos-15 failed before runner allocation during ARM64 capacity
+          # shortages. Keep native Apple Silicon builds on the macOS 26 pool.
+          - os: macos-26
             platform: macos-arm64
             qt-host: mac
             qt-arch: clang_64
@@ -61,6 +65,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Verify Apple Silicon runner
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          actual_arch=$(uname -m)
+          echo "macOS build host: $actual_arch"
+          test "$actual_arch" = arm64
       - name: Install Qt 6.12
         uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
@@ -71,6 +82,8 @@ jobs:
           # Qt >= 6.11 splits Windows metadata by compiler; aqt 3.3 uses the old path.
           aqtsource: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
           cache: true
+      - name: Test package architecture validation
+        run: python -m unittest discover -s tests/tools -p test_qt_package.py
       - name: Configure Windows panel
         if: runner.os == 'Windows'
         run: cmake -S ui/qt -B build/panel -G "Visual Studio 17 2022" -A x64 -DSUNSHINE_QT_TESTS=ON
