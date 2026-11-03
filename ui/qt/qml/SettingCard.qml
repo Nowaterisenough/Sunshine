@@ -9,7 +9,7 @@ Rectangle {
     property bool prominent: false
     property bool grouped: false
     property bool last: false
-    property color descriptionColor: Theme.muted
+    property color descriptionColor: Theme.secondary
     property int minimumHeight: Theme.cardHeight
     readonly property int verticalPadding: Theme.windows ? 16 : 24
     readonly property bool wrapped: width < 530 && actions.implicitWidth > 230

@@ -50,7 +50,8 @@ ApplicationWindow {
     RowLayout {
         id: settingsBar
         visible: root.settingsVisible
-        x: Theme.pagePadding; y: chrome.height + 4; width: root.width - 2 * Theme.pagePadding; height: 30
+        x: Theme.pagePadding - 6; y: chrome.height + 4
+        width: root.width - x - Theme.pagePadding; height: 28
         spacing: 12
         SegmentedControl {
             flat: true
@@ -72,7 +73,7 @@ ApplicationWindow {
     ScrollView {
         id: scroll
         x: 0; y: root.settingsVisible ? settingsBar.y + settingsBar.height + 8 : chrome.height + 6
-        width: root.width; height: root.height - y - 30
+        width: root.width; height: root.height - y - 1
         clip: true
         contentWidth: availableWidth
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff

@@ -8,10 +8,10 @@ Item {
     required property var updates
     property int currentPage: 0
     readonly property bool macControls: Qt.platform.os === "osx"
-    readonly property int navigationY: macControls ? 10 : 40
+    readonly property int navigationY: macControls ? 12 : 40
     signal navigate(int page)
     signal refresh()
-    height: macControls ? 48 : 78
+    height: macControls ? 51 : 78
     MouseArea {
         property point dragOrigin
         property point startPosition
@@ -82,7 +82,7 @@ Item {
                     Accessible.name: modelData.label
                     onClicked: chrome.navigate(modelData.page)
                     contentItem: PanelText { id: caption; text: nav.modelData.label; color: chrome.currentPage === nav.modelData.page ? Theme.text : Theme.muted; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    background: Rectangle { radius: 6; color: chrome.currentPage === nav.modelData.page ? Theme.selected : nav.hovered ? Theme.hover : "transparent"; border.color: nav.activeFocus ? Theme.accent : "transparent" }
+                    background: Rectangle { radius: 6; color: chrome.currentPage === nav.modelData.page ? Theme.selected : nav.hovered ? Theme.hover : "transparent"; border.color: nav.visualFocus ? Theme.accent : "transparent" }
                 }
             }
         }

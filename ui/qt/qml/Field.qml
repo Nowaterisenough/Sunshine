@@ -12,7 +12,7 @@ TextField {
     leftPadding: 10
     rightPadding: 10
     background: Rectangle {
-        color: Theme.control
+        color: Theme.card
         radius: 7
         border.color: control.activeFocus ? Theme.accent : Theme.border
     }

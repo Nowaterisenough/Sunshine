@@ -20,7 +20,7 @@ ComboBox {
     }
     indicator: LineIcon { name: "chevron"; width: 12; height: 12; x: control.width - 25; anchors.verticalCenter: parent.verticalCenter }
     background: Rectangle {
-        radius: 7; color: Theme.control; border.color: control.activeFocus ? Theme.accent : "transparent"
+        radius: 7; color: Theme.card; border.color: control.activeFocus ? Theme.accent : Theme.border
         Rectangle { anchors.fill: parent; radius: parent.radius; color: control.hovered ? Theme.hover : "transparent" }
     }
     delegate: ItemDelegate {
