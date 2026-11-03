@@ -216,6 +216,10 @@ jobs:
           $expected = "a549929319f9120716677c685535ca4671e4b937b5fdc87e2585f32d8eb30e8c"
           $installer = "$env:TEMP\innosetup.exe"
           Invoke-WebRequest -Uri $url -OutFile $installer -MaximumRetryCount 3 -RetryIntervalSec 3
+          $signature = Get-AuthenticodeSignature -FilePath $installer
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -cne 'Pyrsys B.V.') {
+            throw "Unexpected Inno Setup installer signature: $($signature.Status) $($signature.SignerCertificate.Subject)"
+          }
           if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $expected) {
             throw 'Inno Setup download checksum mismatch'
           }
