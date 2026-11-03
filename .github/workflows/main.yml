@@ -623,7 +623,7 @@ jobs:
       - name: Validate packages and publish all platforms
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/publish-qt-release.py
+        run: python scripts/publish-qt-release.py ${{ github.ref_name == 'master' && '--stable' || '' }}
 
   publish_existing:
     name: Publish existing Qt builds
@@ -647,4 +647,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           HOST_RUN_ID: ${{ inputs.host_run_id }}
           PANEL_RUN_ID: ${{ inputs.panel_run_id }}
-        run: python scripts/publish-qt-release.py --host-run "$HOST_RUN_ID" --panel-run "$PANEL_RUN_ID"
+        run: python scripts/publish-qt-release.py --host-run "$HOST_RUN_ID" --panel-run "$PANEL_RUN_ID" ${{ github.ref_name == 'master' && '--stable' || '' }}

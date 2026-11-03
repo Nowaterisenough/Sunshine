@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish validated host and panel artifacts as one complete Qt prerelease."""
+"""Publish validated host and panel artifacts as a Qt release or prerelease."""
 
 import argparse
 import hashlib
@@ -30,12 +30,24 @@ def api(path, optional=False, body=None):
     return json.loads(result.stdout)
 
 
-def create_draft(repository, tag, commit, title, notes, tag_exists):
-    body = {"tag_name": tag, "name": title, "body": notes, "draft": True, "prerelease": True}
+def create_draft(repository, tag, commit, title, notes, tag_exists, stable=False):
+    body = {"tag_name": tag, "name": title, "body": notes, "draft": True, "prerelease": not stable}
     if not tag_exists:
         body["target_commitish"] = commit
     # The create response is authoritative; release listings can lag behind it.
     return api(f"repos/{repository}/releases", body=body)
+
+
+def finalize_release(repository, tag, release, expected_assets, title, notes, stable=False):
+    remote = {item["name"]: item.get("digest") for item in release["assets"]}
+    if remote != expected_assets:
+        raise ValueError("Release asset verification failed; refusing to publish or change its channel")
+    # Re-running a preview build must never downgrade an existing stable release.
+    if not release["draft"] and not (stable and release.get("prerelease", False)):
+        return
+    gh("release", "edit", tag, "--repo", repository, "--draft=false",
+       "--prerelease=false" if stable else "--prerelease",
+       "--latest" if stable else "--latest=false", "--title", title, "--notes-file", notes)
 
 
 def digest(path):
@@ -126,10 +138,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host-run", default=os.environ.get("GITHUB_RUN_ID", ""))
     parser.add_argument("--panel-run", default=os.environ.get("GITHUB_RUN_ID", ""))
+    parser.add_argument("--stable", action="store_true", help="Publish a stable Latest release from master")
     args = parser.parse_args()
     if not args.host_run.isdecimal() or not args.panel_run.isdecimal():
         parser.error("Both producer run IDs are required")
     repository, branch = os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_REF_NAME"]
+    if args.stable and branch != "master":
+        parser.error("Stable Qt releases must be published from master")
     current_run = os.environ.get("GITHUB_RUN_ID", "")
     host = api(f"repos/{repository}/actions/runs/{args.host_run}")
     panel = api(f"repos/{repository}/actions/runs/{args.panel_run}")
@@ -179,7 +194,9 @@ def main():
         tag = f"qt-{host['head_sha'][:12]}"
         notes = root / "release-notes.md"
         rtx = "包含" if rtx_hdr else "未包含"
-        notes.write_text(f"""Qt 6.12 界面预览版，默认关闭旧 Web/Tauri 界面和 AI 功能。
+        channel = "正式版" if args.stable else "预览版"
+        title = f"Sunshine Qt 6.12{' ' + channel if args.stable else ' Preview'} ({host['created_at'][:10]}, {host['head_sha'][:7]})"
+        notes.write_text(f"""Qt 6.12 原生界面{channel}，默认关闭旧 Web/Tauri 界面和 AI 功能。
 
 | 下载文件 | 内容 |
 | --- | --- |
@@ -190,7 +207,7 @@ def main():
 | `Sunshine.Ds5Sidecar.x64.zip` | 可选 DualSense 组件 |
 
 macOS ARM64 完整串流主机版尚未完成；本包不能单独将 Mac 变成串流主机。
-这些是开发预览构建，尚未正式签名或公证，也未进行实体显卡/Moonlight 串流验收。
+安装器和应用尚未正式签名或公证；实体显卡/Moonlight 串流仍需在实际设备上验收。
 完整 Windows 包{rtx}可选 RTX Video HDR 适配器。
 
 主机源码：`{host['head_sha']}`；面板源码：`{panel['head_sha']}`，Qt 构建输入已核对一致。
@@ -203,25 +220,17 @@ macOS ARM64 完整串流主机版尚未完成；本包不能单独将 Mac 变成
             raise ValueError("Release tag points at a different commit")
         release = find_release(repository, tag)
         expected_assets = {path.name: f"sha256:{digest(path)}" for path in assets}
-        if release and not release["draft"]:
-            remote = {item["name"]: item.get("digest") for item in release["assets"]}
-            if remote != expected_assets:
-                raise ValueError("Published release differs; refusing to overwrite its assets")
-        else:
+        if not release or release["draft"]:
             if not release:
-                release = create_draft(repository, tag, host["head_sha"],
-                    f"Sunshine Qt 6.12 Preview ({host['created_at'][:10]}, {host['head_sha'][:7]})",
-                    notes.read_text(encoding="utf-8"), bool(ref))
+                release = create_draft(repository, tag, host["head_sha"], title,
+                    notes.read_text(encoding="utf-8"), bool(ref), stable=args.stable)
             if not release:
                 raise RuntimeError("New release draft could not be located")
             remote = {item["name"]: item.get("digest") for item in release["assets"]}
             if remote != expected_assets:
                 gh("release", "upload", tag, *assets, "--repo", repository, "--clobber")
-            uploaded = api(f"repos/{repository}/releases/{release['id']}")
-            remote = {item["name"]: item.get("digest") for item in uploaded["assets"]}
-            if remote != expected_assets:
-                raise ValueError("Release upload verification failed; leaving the draft unpublished")
-            gh("release", "edit", tag, "--repo", repository, "--draft=false", "--prerelease", "--latest=false")
+            release = api(f"repos/{repository}/releases/{release['id']}")
+        finalize_release(repository, tag, release, expected_assets, title, notes, stable=args.stable)
         url = f"https://github.com/{repository}/releases/tag/{tag}"
         print(f"Published verified Qt release: {url}")
         if os.environ.get("GITHUB_STEP_SUMMARY"):

@@ -61,17 +61,17 @@ fork 和手动构建使用运行编号生成版本信息，不需要上游 `setu
 
 ## GitHub Release 发布
 
-fork 的 `Build and Release` 会复用 `Build Qt Packages`，等待完整 Windows 包、Windows/macOS 面板以及主机测试全部通过后，自动发布一个 Qt **预发布 Release**。PR 只构建和测试，不发布。发布使用当前仓库的 `GITHUB_TOKEN`，无需配置 `GH_BOT_TOKEN`。
+fork 的 `Build and Release` 会复用 `Build Qt Packages`，等待完整 Windows 包、Windows/macOS 面板以及主机测试全部通过后发布。**`master` 发布正式 Release 并标记 Latest；开发分支的手动构建发布预发布版，不占用 Latest。** PR 只构建和测试，不发布。发布使用当前仓库的 `GITHUB_TOKEN`，无需配置 `GH_BOT_TOKEN`。
 
 Release 同时包含完整 Windows 安装器、便携包、可选 DualSense 组件、Windows 独立面板和 **macOS ARM64 独立面板**，另附统一的 `SHA256SUMS.txt` 和 `release-build-info.json`。Windows 独立面板的 Release 文件名使用 `win-x64`，避免旧更新器把含 `Windows` 的面板 ZIP 误当成完整安装器。
 
-**macOS ARM64 包目前只包含 Qt 界面，不包含串流内核。完整 macOS 串流主机版尚未完成。** Release 标题和说明会明确产品范围，开发预览包未签名/公证。
+**macOS ARM64 包目前只包含 Qt 界面，不包含串流内核。完整 macOS 串流主机版尚未完成。** Release 标题和说明会明确产品范围及签名／公证状态。正式 Release 表示 GitHub 发布渠道；不会将未签名文件宣称为已签名。
 
 可以在 `Build and Release` 的手动运行选项中开启 `publish_existing`，填写成功的 `host_run_id` 和 `panel_run_id`，直接发布已经验证的产物，不必再次编译。运行工作流的分支必须与两份产物的来源分支一致。
 
 复用历史提交时，由维护者先推送指向该主机构建提交的 `qt-<提交前12位>` Git 标签。这样内置令牌只发布已验证的标签，无需为旧提交创建引用；正常构建会自行创建当前提交的标签。草稿按 Release ID 校验，重试会复用已经上传且摘要一致的文件。
 
-发布前会验证工作流来源、状态、源码兼容性、平台元数据和 SHA-256；完整主机包也会检查内核及 Qt 文件是否齐全、是否混入旧界面。所有文件上传并核对远端摘要后才公开草稿。标签为 `qt-<主机构建提交的前12位>`，指向实际构建的主机源码；重复运行不会覆盖已发布且内容不同的 Release。
+发布前会验证工作流来源、状态、源码兼容性、平台元数据和 SHA-256；完整主机包也会检查内核及 Qt 文件是否齐全、是否混入旧界面。所有文件上传并核对远端摘要后才公开草稿。`--stable` 只允许从 `master` 使用，设置 `prerelease=false` 和 Latest；已有同内容预发布版可以升为正式版，已发布的正式版不会被预发布重跑降级。标签为 `qt-<主机构建提交的前12位>`，指向实际构建的主机源码；重复运行不会覆盖已发布且内容不同的 Release。
 
 ## 本地验证同一打包脚本
 

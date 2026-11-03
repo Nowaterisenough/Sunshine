@@ -8,7 +8,7 @@
 [`AlkaidLab/foundation-sunshine` 的 `master`](https://github.com/AlkaidLab/foundation-sunshine/tree/master)。
 同步路径固定为 **`upstream/master` → 合并到 `codex/qt-actions` → `origin/codex/qt-actions`**。
 这里的 fork sync 是保留分支历史的合并：保留上游串流内核、协议、驱动与接口更新，同时继续使用本仓库 `ui/qt/` 的原生界面。
-`master` 和 `src_assets/common/sunshine-control-panel` 不是本 fork 的 Qt 界面开发入口。
+`master` 是 Qt 正式发布分支；日常 Qt 开发继续在 `codex/qt-actions`。`src_assets/common/sunshine-control-panel` 不是本 fork 的 Qt 界面开发入口。
 
 界面参考是 **Magpie AI 应用的顶部导航布局**：顶部主导航，下一行分类标签与右侧搜索，连续设置行。
 保持 Sunshine 自身功能与品牌；不把它改成侧栏，也不重新接回网页／Tauri 容器。
@@ -110,7 +110,16 @@ git push origin HEAD:codex/qt-actions
 不改写已发布的 Qt 历史。推送 Qt 界面改动会触发 **Build Qt Packages**，检查 Windows 和 macOS 构建、契约测试、部署包与截图。
 macOS 只发布 arm64；默认使用 Intel runner 交叉编译并运行临时本机测试，原生 ARM64 验收步骤见 [Qt Actions 说明](docs/qt-actions.md#macos-runner-与-arm64-验证)。
 只有后端更新、未命中该工作流路径过滤时，手动运行：`gh workflow run qt-panel.yml --ref codex/qt-actions`。
-**Build and Release** 的手动运行及 `publish_existing` 会进入发布流程，不能当作只读验证命令；需要发布时再按 [Qt Actions 说明](docs/qt-actions.md) 执行。
+验证完成后，将 Qt 分支合入 `master` 并推送，会触发完整 **Build and Release**。全部检查和附件校验通过后，`master` 自动发布正式 Release 并标记 Latest；开发分支手动运行仍为预发布版。
+
+```bash
+git switch master
+git merge --ff-only origin/master
+git merge --ff-only codex/qt-actions
+git push origin master
+```
+
+如果分支已分叉，先审查并正常合并，不能用强制推送覆盖。**Build and Release** 的手动运行及 `publish_existing` 同样会发布；正式版限 `master`。详见 [Qt Actions 说明](docs/qt-actions.md)。
 
 | 同步日期 | 上游基线 | Qt 合并提交 |
 | --- | --- | --- |

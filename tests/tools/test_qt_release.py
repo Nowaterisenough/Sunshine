@@ -1,4 +1,6 @@
 import importlib.util
+import contextlib
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -42,6 +44,66 @@ class ReleaseValidationTest(unittest.TestCase):
         with patch.object(release, "api", return_value={"id": 123}) as api:
             release.create_draft("owner/repo", "qt-example", "old-sha", "Preview", "Notes", True)
             self.assertNotIn("target_commitish", api.call_args.kwargs["body"])
+
+    def test_stable_release_remains_draft_until_assets_are_verified(self):
+        with patch.object(release, "api", return_value={"id": 123}) as api:
+            release.create_draft("owner/repo", "qt-example", "sha", "Stable", "Notes", False, stable=True)
+            body = api.call_args.kwargs["body"]
+            self.assertTrue(body["draft"])
+            self.assertFalse(body["prerelease"])
+
+    def test_verified_stable_draft_is_published_as_latest(self):
+        snapshot = {"draft": True, "prerelease": False, "assets": [{"name": "package.zip", "digest": "sha256:abc"}]}
+        with patch.object(release, "gh") as gh:
+            release.finalize_release("owner/repo", "qt-example", snapshot, {"package.zip": "sha256:abc"},
+                                     "Stable", self.folder / "notes.md", stable=True)
+            self.assertIn("--draft=false", gh.call_args.args)
+            self.assertIn("--prerelease=false", gh.call_args.args)
+            self.assertIn("--latest", gh.call_args.args)
+
+    def test_preview_draft_stays_out_of_latest(self):
+        snapshot = {"draft": True, "prerelease": True, "assets": [{"name": "package.zip", "digest": "sha256:abc"}]}
+        with patch.object(release, "gh") as gh:
+            release.finalize_release("owner/repo", "qt-example", snapshot, {"package.zip": "sha256:abc"},
+                                     "Preview", self.folder / "notes.md")
+            self.assertIn("--prerelease", gh.call_args.args)
+            self.assertIn("--latest=false", gh.call_args.args)
+
+    def test_matching_preview_can_be_promoted_without_reuploading(self):
+        snapshot = {"draft": False, "prerelease": True, "assets": [{"name": "package.zip", "digest": "sha256:abc"}]}
+        with patch.object(release, "gh") as gh:
+            release.finalize_release("owner/repo", "qt-example", snapshot, {"package.zip": "sha256:abc"},
+                                     "Stable", self.folder / "notes.md", stable=True)
+            gh.assert_called_once()
+            self.assertEqual(gh.call_args.args[:2], ("release", "edit"))
+            self.assertIn("--prerelease=false", gh.call_args.args)
+
+    def test_bad_or_incomplete_assets_cannot_be_published_or_promoted(self):
+        for draft in (True, False):
+            with self.subTest(draft=draft), patch.object(release, "gh") as gh:
+                snapshot = {"draft": draft, "prerelease": True, "assets": [{"name": "package.zip", "digest": "sha256:wrong"}]}
+                with self.assertRaisesRegex(ValueError, "asset verification failed"):
+                    release.finalize_release("owner/repo", "qt-example", snapshot,
+                        {"package.zip": "sha256:abc", "SHA256SUMS.txt": "sha256:checks"},
+                        "Stable", self.folder / "notes.md", stable=True)
+                gh.assert_not_called()
+
+    def test_published_stable_is_not_downgraded_or_rewritten(self):
+        snapshot = {"draft": False, "prerelease": False, "assets": [{"name": "package.zip", "digest": "sha256:abc"}]}
+        for stable in (True, False):
+            with self.subTest(stable=stable), patch.object(release, "gh") as gh:
+                release.finalize_release("owner/repo", "qt-example", snapshot, {"package.zip": "sha256:abc"},
+                                         "Title", self.folder / "notes.md", stable=stable)
+                gh.assert_not_called()
+
+    def test_stable_release_from_development_branch_stops_before_network(self):
+        environment = {"GITHUB_REPOSITORY": "owner/repo", "GITHUB_REF_NAME": "codex/qt-actions", "GITHUB_RUN_ID": "10"}
+        with patch.dict(release.os.environ, environment), patch("sys.argv", ["publish-qt-release.py", "--stable"]), \
+                patch.object(release, "api") as api, contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as error:
+                release.main()
+            self.assertEqual(error.exception.code, 2)
+            api.assert_not_called()
 
     def panel(self):
         name = "Sunshine-Qt-Panel-6.12.0-macos-arm64.zip"
