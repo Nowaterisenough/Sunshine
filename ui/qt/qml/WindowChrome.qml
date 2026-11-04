@@ -81,7 +81,23 @@ Item {
                     hoverEnabled: true
                     Accessible.name: modelData.label
                     onClicked: chrome.navigate(modelData.page)
-                    contentItem: PanelText { id: caption; text: nav.modelData.label; color: chrome.currentPage === nav.modelData.page ? Theme.text : Theme.muted; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    contentItem: PanelText {
+                        id: caption
+                        text: nav.modelData.label
+                        color: chrome.currentPage === nav.modelData.page ? Theme.text : Theme.muted
+                        font.pixelSize: 14
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        scale: nav.down ? 0.96 : 1
+                        transformOrigin: Item.Center
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 140
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: [0.2, 0.8, 0.2, 1, 1, 1]
+                            }
+                        }
+                    }
                     background: Rectangle { radius: 6; color: chrome.currentPage === nav.modelData.page ? Theme.selected : nav.hovered ? Theme.hover : "transparent"; border.color: nav.visualFocus ? Theme.accent : "transparent" }
                 }
             }

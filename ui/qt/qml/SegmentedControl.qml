@@ -27,7 +27,25 @@ Rectangle {
                 hoverEnabled: true
                 Accessible.name: modelData
                 onClicked: control.activated(index)
-                contentItem: PanelText { id: caption; text: segment.modelData; color: control.currentIndex === segment.index ? Theme.text : Theme.muted; font.pixelSize: control.flat ? 12 : 13; font.weight: control.flat ? Font.DemiBold : Font.Normal; font.letterSpacing: control.flat ? 0.55 : 0; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: PanelText {
+                    id: caption
+                    text: segment.modelData
+                    color: control.currentIndex === segment.index ? Theme.text : Theme.muted
+                    font.pixelSize: control.flat ? 12 : 13
+                    font.weight: control.flat ? Font.DemiBold : Font.Normal
+                    font.letterSpacing: control.flat ? 0.55 : 0
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    scale: segment.down ? 0.96 : 1
+                    transformOrigin: Item.Center
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: 140
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: [0.2, 0.8, 0.2, 1, 1, 1]
+                        }
+                    }
+                }
                 background: Rectangle { radius: control.flat ? 6 : 5; color: control.currentIndex === segment.index ? (control.flat ? Theme.control : Theme.card) : segment.hovered ? Theme.hover : "transparent"; border.color: segment.visualFocus ? Theme.accent : "transparent" }
             }
         }

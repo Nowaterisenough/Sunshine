@@ -18,6 +18,7 @@ This document replaces the earlier, incorrect WinUI design reference.
 | Muted text | #8b8b94 |
 | Accent text / pill | #a5b4fc / #2b2c47 |
 | Main navigation | Windows: separate 32 px caption and centered tabs at y=40; macOS: compact 51 px single row |
+| Navigation press feedback | Main tabs, settings categories and segment labels scale from the center to 96% while down, then return to 100%; 140 ms each way with cubic-bezier(.2, .8, .2, 1); selection background and hit area stay fixed |
 | Content | 18 px side margins; starts 6 px below chrome, or below settings tabs |
 | Grouped rows | Windows 54 px / macOS 57 px minimum; wrapped descriptions grow the row; no gaps; 12 px group radius |
 | Typography | Bundled Noto Sans CJK SC on Windows / PingFang SC on macOS; 14 px titles; 13 px descriptions, segment labels and text fields |
