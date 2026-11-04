@@ -6,6 +6,11 @@ Three short rays distinguish the sun without using a ring of fine strokes.
 The flat application icon uses solid charcoal (`#242429`) and amber (`#f2c475`),
 without gradients, highlights, shadows, or an outer rim.
 
+The amber mark occupies about 87% of the application icon's width, including
+its stroke. Keep this larger optical size when regenerating assets: the charcoal
+tile blends into dark Windows taskbars, so excess padding makes the mark appear
+smaller than neighboring applications. Window and tray marks use their own sizing.
+
 - `sunshine.svg` is the vector master for the application and installer icon.
 - `sunshine.png`, `sunshine.ico` and `sunshine.icns` are generated from that master.
 - `ui/qt/assets/sunshine-mark.svg` is the transparent amber window mark.
